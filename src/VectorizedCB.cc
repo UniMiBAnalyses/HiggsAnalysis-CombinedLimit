@@ -1,9 +1,11 @@
 #include "../interface/VectorizedCB.h"
 #include "RooMath.h"
+#include "TMath.h"
 #include "vectorized.h"
 #include "../interface/ProfilingTools.h"
 #include <RooRealVar.h>
 #include <stdexcept>
+#include <algorithm>
 
 VectorizedCBShape::VectorizedCBShape(const RooCBShape &gaus, const RooAbsData &data)
 {

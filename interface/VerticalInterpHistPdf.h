@@ -86,6 +86,8 @@ public:
   /// Must be public, for serialization
   struct Morph { FastTemplate sum; FastTemplate diff; };
 
+  bool cacheIsGood() const { return _sentry.good() && _init; }
+
   friend class FastVerticalInterpHistPdf2Base;
 protected:
   RooRealProxy   _x;
@@ -144,6 +146,8 @@ public:
 
   Bool_t hasCache()     const { return _cache.size() > 0; }
   Bool_t isCacheReady() const { return _cache.size() > 0 && _init; }
+
+  FastHisto const& getCache() const { return _cache; }
   friend class FastVerticalInterpHistPdfV;
   friend class FastVerticalInterpHistPdf2;
 protected:

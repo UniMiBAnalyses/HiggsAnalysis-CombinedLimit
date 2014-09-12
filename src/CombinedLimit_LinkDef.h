@@ -23,6 +23,7 @@
 #include "../interface/RooBernsteinFast.h"
 #include "../interface/SimpleGaussianConstraint.h"
 #include "../interface/AtlasPdfs.h"
+#include "../interface/RooMorphingPdf.h"
 
 
 #ifdef __CINT__
@@ -128,4 +129,6 @@
 #pragma link C++ class RooStats::HistFactory::RooBSpline+;
 #pragma link C++ class RooParamKeysPdf+;
 #pragma link C++ class RooStarMomentMorph+;
+
+#pragma link C++ class RooMorphingPdf+;
 #endif 
