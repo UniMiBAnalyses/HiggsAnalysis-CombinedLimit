@@ -9,7 +9,7 @@
 #include "RooAbsReal.h"
 #include "TH1F.h"
 #include "Rtypes.h"
-#include "HiggsAnalysis/CombinedLimit/interface/VerticalInterpHistPdf.h"
+#include "../interface/VerticalInterpHistPdf.h"
 
 class RooMorphingPdf : public RooAbsPdf {
  protected:
