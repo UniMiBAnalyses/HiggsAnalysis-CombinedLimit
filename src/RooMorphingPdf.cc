@@ -1,4 +1,5 @@
 #include "../interface/RooMorphingPdf.h"
+#include <stdexcept>
 #include "RooHistPdf.h"
 #include "RooDataHist.h"
 #include "RooRealProxy.h"
@@ -22,8 +23,8 @@ RooMorphingPdf::RooMorphingPdf(const char* name, const char* title,
                                bool const& can_morph, TAxis const& target_axis,
                                TAxis const& morph_axis)
     : RooAbsPdf(name, title),
-      x_("x", "x", this, x),
-      mh_("MH", "MH", this, mh),
+      x_(x.GetName(), x.GetTitle(), this, x),
+      mh_(mh.GetName(), mh.GetTitle(), this, mh),
       current_mh_(-1.),
       can_morph_(can_morph),
       rebin_(TArrayI()),
@@ -36,16 +37,24 @@ RooMorphingPdf::RooMorphingPdf(const char* name, const char* title,
 
 RooMorphingPdf::RooMorphingPdf(const RooMorphingPdf& other, const char* name)
     : RooAbsPdf(other, name),
-      x_(other.x_),
-      mh_(other.mh_),
+      x_(other.x_.GetName(), this, other.x_),
+      mh_(other.mh_.GetName(), this, other.mh_),
       current_mh_(other.current_mh_),
       can_morph_(other.can_morph_),
       rebin_(other.rebin_),
       target_axis_(other.target_axis_),
       morph_axis_(other.morph_axis_),
-      hmap_(other.hmap_),
       init_(other.init_),
-      cache_(other.cache_) {}
+      cache_(other.cache_) {
+  for (auto const& x : other.hmap_) {
+    // Important that the RooRealProxy objects stored in the map are constructed
+    // in-place. The constructor registers the address of the proxy in our pdf
+    // (via this this pointer we pass), so clearly we can't construct a
+    // temporary
+    hmap_.emplace(std::piecewise_construct, std::forward_as_tuple(x.first),
+                  std::forward_as_tuple(x.second.GetName(), this, x.second));
+  }
+}
 
 void RooMorphingPdf::SetAxisInfo() {
   if (!morph_axis_.IsVariableBinSize()) {
@@ -60,8 +69,8 @@ void RooMorphingPdf::SetAxisInfo() {
   rebin_ = TArrayI(morph_axis_.GetNbins());
   for (int i = 0; i < rebin_.GetSize(); ++i) {
     rebin_[i] = target_axis_.FindFixBin(morph_axis_.GetBinCenter(i+1)) - 1;
-    std::cout << "Morph bin " << i << " goes to target bin " << rebin_[i]
-              << "\n";
+    // std::cout << "Morph bin " << i << " goes to target bin " << rebin_[i]
+    //           << "\n";
   }
 }
 
@@ -73,7 +82,8 @@ void RooMorphingPdf::Init() const {
 
 void RooMorphingPdf::AddPoint(double point,
                               FastVerticalInterpHistPdf & hist) {
-  hmap_[point] = RooRealProxy("proxy", "", this, hist);
+  hmap_.emplace(std::piecewise_construct, std::forward_as_tuple(point),
+                std::forward_as_tuple(hist.GetName(), "", this, hist));
 }
 
 
