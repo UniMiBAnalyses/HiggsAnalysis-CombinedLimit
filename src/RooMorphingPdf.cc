@@ -1,5 +1,6 @@
 #include "../interface/RooMorphingPdf.h"
 #include <stdexcept>
+#include <vector>
 #include "RooHistPdf.h"
 #include "RooDataHist.h"
 #include "RooRealProxy.h"
@@ -10,6 +11,8 @@
 RooMorphingPdf::RooMorphingPdf()
     : x_(RooRealProxy()),
       mh_(RooRealProxy()),
+      pdfs_(RooListProxy()),
+      masses_(std::vector<double>()),
       current_mh_(0.),
       can_morph_(false),
       rebin_(TArrayI()),
@@ -19,12 +22,16 @@ RooMorphingPdf::RooMorphingPdf()
       cache_(FastHisto()) {}
 
 RooMorphingPdf::RooMorphingPdf(const char* name, const char* title,
-                               RooRealVar & x, RooAbsReal & mh,
+                               RooRealVar& x, RooAbsReal& mh,
+                               RooArgList const& pdfs,
+                               std::vector<double> const& masses,
                                bool const& can_morph, TAxis const& target_axis,
                                TAxis const& morph_axis)
     : RooAbsPdf(name, title),
       x_(x.GetName(), x.GetTitle(), this, x),
       mh_(mh.GetName(), mh.GetTitle(), this, mh),
+      pdfs_(pdfs.GetName(), pdfs.GetTitle(), this),
+      masses_(masses),
       current_mh_(-1.),
       can_morph_(can_morph),
       rebin_(TArrayI()),
@@ -33,28 +40,26 @@ RooMorphingPdf::RooMorphingPdf(const char* name, const char* title,
       init_(false),
       cache_(FastHisto()) {
   SetAxisInfo();
+  TIterator* pdf_iter = pdfs.createIterator();
+  RooAbsArg* pdf;
+  while ((pdf = reinterpret_cast<RooAbsArg*>(pdf_iter->Next())))
+    pdfs_.add(*pdf);
+  delete pdf_iter;
 }
 
 RooMorphingPdf::RooMorphingPdf(const RooMorphingPdf& other, const char* name)
     : RooAbsPdf(other, name),
       x_(other.x_.GetName(), this, other.x_),
       mh_(other.mh_.GetName(), this, other.mh_),
+      pdfs_(other.pdfs_.GetName(), this, other.pdfs_),
+      masses_(other.masses_),
       current_mh_(other.current_mh_),
       can_morph_(other.can_morph_),
       rebin_(other.rebin_),
       target_axis_(other.target_axis_),
       morph_axis_(other.morph_axis_),
       init_(other.init_),
-      cache_(other.cache_) {
-  for (auto const& x : other.hmap_) {
-    // Important that the RooRealProxy objects stored in the map are constructed
-    // in-place. The constructor registers the address of the proxy in our pdf
-    // (via this this pointer we pass), so clearly we can't construct a
-    // temporary
-    hmap_.emplace(std::piecewise_construct, std::forward_as_tuple(x.first),
-                  std::forward_as_tuple(x.second.GetName(), this, x.second));
-  }
-}
+      cache_(other.cache_) {}
 
 void RooMorphingPdf::SetAxisInfo() {
   if (!morph_axis_.IsVariableBinSize()) {
@@ -75,55 +80,69 @@ void RooMorphingPdf::SetAxisInfo() {
 }
 
 void RooMorphingPdf::Init() const {
+  hmap_.clear();
+  if (masses_.size() != unsigned(pdfs_.getSize())) {
+    std::cout << "Number of mass points: " << masses_.size() << "\n";
+    std::cout << "Number of pdfs: " << pdfs_.getSize() << "\n";
+    throw std::runtime_error(
+        "RooMorphingPdf: Number of mass points differs from the number of "
+        "stored pdfs!");
+  }
+  for (unsigned i = 0; i < masses_.size(); ++i) {
+    FastVerticalInterpHistPdf2* tpdf =
+        dynamic_cast<FastVerticalInterpHistPdf2*>(pdfs_.at(i));
+    if (!tpdf)
+      throw std::runtime_error(
+          "RooMorphingPdf: Supplied pdf is not of type "
+          "FastVerticalInterpHistPdf2");
+    hmap_[masses_[i]] = tpdf;
+  }
   cache_ = FastHisto(TH1F("tmp", "tmp", target_axis_.GetNbins(), 0,
                           static_cast<float>(target_axis_.GetNbins())));
   init_ = true;
 }
 
-void RooMorphingPdf::AddPoint(double point,
-                              FastVerticalInterpHistPdf & hist) {
-  hmap_.emplace(std::piecewise_construct, std::forward_as_tuple(point),
-                std::forward_as_tuple(hist.GetName(), "", this, hist));
-}
-
-
 Double_t RooMorphingPdf::evaluate() const {
-  if (!init_) Init();
+  if (!init_ || hmap_.empty()) Init();
 
   double mh = mh_;
   // cache is empty: throw exception
   if (hmap_.empty())
+  {
+    std::cout << "name:   " << this->GetName() << "\n";
+    std::cout << "init?:  " << init_ << "\n";
+    std::cout << "masses: " << masses_.size() << "\n";
+    std::cout << "pdfs:   " << pdfs_.getSize() << "\n";
     throw std::runtime_error("RooMorphingPdf: Cache is empty!");
+  }
 
   bool single_point = false;
-  FastVerticalInterpHistPdf const* p1 = nullptr;
-  FastVerticalInterpHistPdf const* p2 = nullptr;
+  FastVerticalInterpHistPdf2 const* p1 = nullptr;
+  FastVerticalInterpHistPdf2 const* p2 = nullptr;
   double mh_lo = 0.;
   double mh_hi = 0.;
 
   MassMapIter upper = hmap_.lower_bound(mh);
   if (upper == hmap_.begin()) {
     single_point = true;
-    p1 = &(static_cast<FastVerticalInterpHistPdf const&>(upper->second.arg()));
+    p1 = upper->second;
   } else if (upper == hmap_.end()) {
     single_point = true;
     --upper;
-    p1 = &(static_cast<FastVerticalInterpHistPdf const&>(upper->second.arg()));
+    p1 = upper->second;
   } else {
     MassMapIter lower = upper;
     --lower;
-    p1 = &(static_cast<FastVerticalInterpHistPdf const&>(lower->second.arg()));
-    p2 = &(static_cast<FastVerticalInterpHistPdf const&>(upper->second.arg()));
+    p1 = lower->second;
+    p2 = upper->second;
     mh_lo = lower->first;
     mh_hi = upper->first;
     if (!can_morph_) {
       single_point = true;
       if (fabs(upper->first - mh) <= fabs(mh - lower->first)) {
-        p1 = &(static_cast<FastVerticalInterpHistPdf const&>(
-                  upper->second.arg()));
+        p1 = upper->second;
       } else {
-        p1 = &(static_cast<FastVerticalInterpHistPdf const&>(
-                  lower->second.arg()));
+        p1 = lower->second;
       }
     }
   }
@@ -139,7 +158,7 @@ Double_t RooMorphingPdf::evaluate() const {
     }
   } else {
     if (!(p1->cacheIsGood() && p2->cacheIsGood() && mh == current_mh_)) {
-      std::cout << "Need to morph!\n";
+      //std::cout << "Need to morph!\n";
 
       p1->evaluate();
       p2->evaluate();

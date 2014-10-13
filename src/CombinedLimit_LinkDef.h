@@ -24,7 +24,6 @@
 #include "../interface/SimpleGaussianConstraint.h"
 #include "../interface/AtlasPdfs.h"
 #include "../interface/RooMorphingPdf.h"
-#include "../interface/RooHttYield.h"
 
 
 #ifdef __CINT__
@@ -132,5 +131,4 @@
 #pragma link C++ class RooStarMomentMorph+;
 
 #pragma link C++ class RooMorphingPdf+;
-#pragma link C++ class RooHttYield+;
 #endif 

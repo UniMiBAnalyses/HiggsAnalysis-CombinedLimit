@@ -20,6 +20,8 @@ class RooMorphingPdf : public RooAbsPdf {
  protected:
   RooRealProxy x_;                // The x-axis variable
   RooRealProxy mh_;               // The mass variable
+  RooListProxy pdfs_;             // pdfs
+  std::vector<double> masses_;    // mass points
   mutable double current_mh_;     // The last-used value of the mass
   bool can_morph_;                // Allowed to do horizontal morphing
 
@@ -28,9 +30,10 @@ class RooMorphingPdf : public RooAbsPdf {
   TAxis target_axis_;             // Target axis
   TAxis morph_axis_;              // Morphing axis
 
-  typedef std::map<double, RooRealProxy> MassMap;
+
+  typedef std::map<double, FastVerticalInterpHistPdf2*> MassMap;
   typedef MassMap::const_iterator MassMapIter;
-  mutable MassMap hmap_;          // Map of PDFs vs mass
+  mutable MassMap hmap_;          //! not to be serialized
 
   mutable bool init_;             //! not to be serialized
   mutable FastHisto cache_;       //! not to be serialized
@@ -47,7 +50,8 @@ class RooMorphingPdf : public RooAbsPdf {
   RooMorphingPdf();
   // Standard constructor
   RooMorphingPdf(const char* name, const char* title, RooRealVar& x,
-                 RooAbsReal& mh, bool const& can_morph,
+                 RooAbsReal& mh, RooArgList const& pdfs,
+                 std::vector<double> const& masses, bool const& can_morph,
                  TAxis const& target_axis, TAxis const& morph_axis);
   // Copy constructor
   RooMorphingPdf(const RooMorphingPdf& other, const char* name = 0);
@@ -57,7 +61,7 @@ class RooMorphingPdf : public RooAbsPdf {
   virtual TObject* clone(const char* newname) const {
     return new RooMorphingPdf(*this, newname);
   }
-  void AddPoint(double point, FastVerticalInterpHistPdf & hist);
+  // void AddPoint(double point, FastVerticalInterpHistPdf & hist);
 
   Bool_t selfNormalized() const { return kTRUE; }
 

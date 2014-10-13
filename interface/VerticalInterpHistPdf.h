@@ -126,7 +126,7 @@ private:
 };
 
 
-struct FastVerticalInterpHistPdfV;
+class FastVerticalInterpHistPdfV;
 class FastVerticalInterpHistPdf : public FastVerticalInterpHistPdfBase {
 public:
 
@@ -252,6 +252,7 @@ public:
 
   virtual void setActiveBins(unsigned int bins) {}
 
+  bool cacheIsGood() const { return _sentry.good() && _initBase; }
   /// Must be public, for serialization
   typedef FastVerticalInterpHistPdfBase::Morph Morph;
 protected:
@@ -264,6 +265,8 @@ protected:
 
   // to check if parameters change
   mutable SimpleCacheSentry _sentry; //! not to be serialized
+
+
 
   // For additive morphing, histograms of (fUp-f0)+(fDown-f0) and (fUp-f0)-(fDown-f0)
   // For multiplicative morphing, log(fUp/f0)+log(fDown/f0),  log(fUp/f0)-log(fDown/f0)
@@ -295,7 +298,7 @@ private:
 };
 
 
-struct FastVerticalInterpHistPdf2V;
+class FastVerticalInterpHistPdf2V;
 class FastVerticalInterpHistPdf2 : public FastVerticalInterpHistPdf2Base {
 public:
 
@@ -312,6 +315,8 @@ public:
 
   virtual void setActiveBins(unsigned int bins) ;
   Double_t evaluate() const ;
+
+  FastHisto const& getCache() const { return _cache; }
 
   friend class FastVerticalInterpHistPdf2V;
 protected:

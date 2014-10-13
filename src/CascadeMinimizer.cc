@@ -76,6 +76,7 @@ bool CascadeMinimizer::improveOnce(int verbose)
     static int optConst = runtimedef::get("MINIMIZER_optimizeConst");
     std::string myType(ROOT::Math::MinimizerOptions::DefaultMinimizerType());
     std::string myAlgo(ROOT::Math::MinimizerOptions::DefaultMinimizerAlgo());
+    minimizer_->setEps(ROOT::Math::MinimizerOptions::DefaultTolerance());
     bool outcome = false;
     if (oldFallback_){
         if (optConst) minimizer_->optimizeConst(std::min(0,optConst));
