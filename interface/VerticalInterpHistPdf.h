@@ -126,7 +126,7 @@ private:
 };
 
 
-class FastVerticalInterpHistPdfV;
+struct FastVerticalInterpHistPdfV;
 class FastVerticalInterpHistPdf : public FastVerticalInterpHistPdfBase {
 public:
 
@@ -298,7 +298,7 @@ private:
 };
 
 
-class FastVerticalInterpHistPdf2V;
+struct FastVerticalInterpHistPdf2V;
 class FastVerticalInterpHistPdf2 : public FastVerticalInterpHistPdf2Base {
 public:
 
