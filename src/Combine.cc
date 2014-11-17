@@ -47,6 +47,7 @@
 
 #include <boost/filesystem.hpp>
 #include <boost/program_options.hpp>
+#include <boost/algorithm/string/predicate.hpp>
 
 #include "../interface/LimitAlgo.h"
 #include "../interface/utils.h"
@@ -76,6 +77,8 @@ float cl = 0.95;
 bool bypassFrequentistFit_ = false;
 TTree *Combine::tree_ = 0;
 
+std::string setPhysicsModelParameterExpression_ = "";
+std::string setPhysicsModelParameterRangeExpression_ = "";
 
 Combine::Combine() :
     statOptions_("Common statistics options"),
@@ -103,6 +106,7 @@ Combine::Combine() :
       ("setPhysicsModelParameterRanges", po::value<string>(&setPhysicsModelParameterRangeExpression_)->default_value(""), "Set the range of relevant physics model parameters. Give a colon separated list of parameter ranges. Example: CV=0.0,2.0:CF=0.0,5.0")      
       ("redefineSignalPOIs", po::value<string>(&redefineSignalPOIs_)->default_value(""), "Redefines the POIs to be this comma-separated list of variables from the workspace.")      
       ("freezeNuisances", po::value<string>(&freezeNuisances_)->default_value(""), "Set as constant all these nuisance parameters.")      
+      ("freezeNuisanceGroups", po::value<string>(&freezeNuisanceGroups_)->default_value(""), "Set as constant all these groups of nuisance parameters.")      
       ;
     ioOptions_.add_options()
       ("saveWorkspace", "Save workspace to output root file")
@@ -262,6 +266,7 @@ void Combine::run(TString hlfFile, const std::string &dataset, double &limit, do
   // Load the model, but going in a temporary directory to avoid polluting the current one with garbage from 'cexpr'
   RooWorkspace *w = 0; RooStats::ModelConfig *mc = 0, *mc_bonly = 0;
   std::auto_ptr<RooStats::HLFactory> hlf(0);
+
   if (isBinary) {
     TFile *fIn = TFile::Open(fileToLoad); 
     garbageCollect.tfile = fIn; // request that we close this file when done
@@ -325,6 +330,14 @@ void Combine::run(TString hlfFile, const std::string &dataset, double &limit, do
         mass_ = MH->getVal();
       }
     }
+  //*********************************************
+  //set physics model parameters    after loading the snapshot
+  //*********************************************
+  if (setPhysicsModelParameterExpression_ != "") {
+      utils::setModelParameters( setPhysicsModelParameterExpression_, w->allVars());
+  }
+
+
   } else {
     hlf.reset(new RooStats::HLFactory("factory", fileToLoad));
     w = hlf->GetWs();
@@ -361,6 +374,9 @@ void Combine::run(TString hlfFile, const std::string &dataset, double &limit, do
     if (w->set("globalObservables")) mc_bonly->SetGlobalObservables(*w->set("globalObservables"));
     if (w->pdf("prior")) mc_bonly->SetNuisanceParameters(*w->pdf("prior"));
     w->import(*mc_bonly, modelConfigNameB_.c_str());
+    if (setPhysicsModelParameterExpression_ != "") {
+	    utils::setModelParameters( setPhysicsModelParameterExpression_, w->allVars());
+    }
   }
   gSystem->cd(pwd);
 
@@ -412,7 +428,15 @@ void Combine::run(TString hlfFile, const std::string &dataset, double &limit, do
       data_obs->add(*observables);
       w->import(*data_obs);
     } else {
-      std::cout << "Dataset " << dataset.c_str() << " not found." << std::endl;
+	    TFile *fIn = TFile::Open(fileToLoad); 
+	    garbageCollect.tfile = fIn; // request that we close this file when done
+	    RooDataSet *data_obs = dynamic_cast<RooDataSet*> (fIn->Get(dataset.c_str())); 
+	    if(data_obs){
+		    data_obs->SetName(dataset.c_str());
+		    w->import(*data_obs);
+	    } else {
+		    std::cout << "Dataset " << dataset.c_str() << " not found." << std::endl;
+	    }
     }
   }
 
@@ -430,19 +454,17 @@ void Combine::run(TString hlfFile, const std::string &dataset, double &limit, do
     r->setVal(0.5*(r->getMin() + r->getMax()));
   }
 
-  //*********************************************
-  //set physics model parameters
-  //*********************************************
   if (setPhysicsModelParameterRangeExpression_ != "") {
       utils::setModelParameterRanges( setPhysicsModelParameterRangeExpression_, w->allVars());
-  }
-  if (setPhysicsModelParameterExpression_ != "") {
-      utils::setModelParameters( setPhysicsModelParameterExpression_, w->allVars());
   }
   if (redefineSignalPOIs_ != "") {
       RooArgSet newPOIs(w->argSet(redefineSignalPOIs_.c_str()));
       TIterator *np = newPOIs.createIterator();
-      while (RooRealVar *arg = (RooRealVar*)np->Next()) arg->setConstant(0);
+      while (RooRealVar *arg = (RooRealVar*)np->Next()) {
+        RooRealVar *rrv = dynamic_cast<RooRealVar *>(arg);
+        if (rrv == 0) { std::cerr << "MultiDimFit: Parameter of interest " << arg->GetName() << " which is not a RooRealVar will be ignored" << std::endl; continue; }
+	arg->setConstant(0);
+      }
       if (verbose > 0) std::cout << "Redefining the POIs to be: "; newPOIs.Print("");
       mc->SetParametersOfInterest(newPOIs);
       POI = mc->GetParametersOfInterest();
@@ -457,7 +479,7 @@ void Combine::run(TString hlfFile, const std::string &dataset, double &limit, do
       } 
   }
   if (freezeNuisances_ != "") {
-      RooArgSet toFreeze(w->argSet(freezeNuisances_.c_str()));
+      RooArgSet toFreeze((freezeNuisances_=="all")?*nuisances:(w->argSet(freezeNuisances_.c_str())));
       if (verbose > 0) std::cout << "Freezing the following nuisance parameters: "; toFreeze.Print("");
       utils::setAllConstant(toFreeze, true);
       if (nuisances) {
@@ -466,6 +488,42 @@ void Combine::run(TString hlfFile, const std::string &dataset, double &limit, do
           mc->SetNuisanceParameters(newnuis);
           if (mc_bonly) mc_bonly->SetNuisanceParameters(newnuis);
           nuisances = mc->GetNuisanceParameters();
+      }
+  }
+  if (freezeNuisanceGroups_ != "") {
+      std::vector<string> nuisanceGroups;
+      boost::algorithm::split(nuisanceGroups,freezeNuisanceGroups_,boost::algorithm::is_any_of(","));
+      for (std::vector<string>::iterator ng_it=nuisanceGroups.begin();ng_it!=nuisanceGroups.end();ng_it++){
+        bool freeze_complement=false;
+      	if (boost::algorithm::starts_with((*ng_it),"^")){
+	  freeze_complement=true;
+	  (*ng_it).erase(0,1);
+	} 
+
+	if (! w->set(Form("group_%s",(*ng_it).c_str()))){
+          std::cerr << "Unknown nuisance group: " << (*ng_it) << std::endl;
+          throw std::invalid_argument("Unknown nuisance group name");
+	}
+        RooArgSet groupNuisances(*(w->set(Form("group_%s",(*ng_it).c_str()))));
+	RooArgSet toFreeze;
+
+	if (freeze_complement) {
+	  RooArgSet still_floating(*mc->GetNuisanceParameters());
+	  still_floating.remove(groupNuisances,true,true);	
+	  toFreeze.add(still_floating);
+	} else {
+	  toFreeze.add(groupNuisances);
+	}
+	
+        if (verbose > 0) std::cout << "Freezing the following nuisance parameters: "; toFreeze.Print("");
+        utils::setAllConstant(toFreeze, true);
+        if (nuisances) {
+          RooArgSet newnuis(*nuisances);
+          newnuis.remove(toFreeze, /*silent=*/true, /*byname=*/true);      
+          mc->SetNuisanceParameters(newnuis);
+          if (mc_bonly) mc_bonly->SetNuisanceParameters(newnuis);
+          nuisances = mc->GetNuisanceParameters();
+       }
       }
   }
 
@@ -751,5 +809,18 @@ void Combine::addDiscreteNuisances(RooWorkspace *w){
             (CascadeMinimizerGlobalConfigs::O().pdfCategories).add(*arg);
           }
         }
+    } 
+    // Run through all of the categories in the workspace and look for "pdfindex" -> fall back option 
+    /*else {
+        RooArgSet discreteParameters_C = w->allCats();
+        TIterator *dp = discreteParameters_C.createIterator();
+        while (RooAbsArg *arg = (RooAbsArg*)dp->Next()) {
+         RooCategory *cat = dynamic_cast<RooCategory*>(arg);
+         if (! (std::string(cat->GetName()).find("pdfindex") != std::string::npos )) continue;
+         if (cat && !cat->isConstant()) {
+            (CascadeMinimizerGlobalConfigs::O().pdfCategories).add(*arg);
+         }
+	}
     }
+    */
 }
