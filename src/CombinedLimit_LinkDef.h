@@ -26,6 +26,7 @@
 #include "../interface/HZZ4L_RooSpinZeroPdf.h"
 #include "../interface/HZZ4L_RooSpinZeroPdf_phase.h"
 #include "../interface/HZZ4L_RooSpinZeroPdf_2D.h"
+#include "../interface/HWWLVJJRooPdfs.h"
 #include "../interface/RooMorphingPdf.h"
 
 #ifdef __CINT__
