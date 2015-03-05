@@ -23,11 +23,9 @@ class TwoHiggsBase(PhysicsModel):
         #print sigproc
         if self.DC.isSignal[process] and process in self.modes: 
             (production,decay, energy) = getHiggsProdDecMode(bin,process,self.options)
-            print (bin, process)
             return self.getHiggsYieldScale(production,decay, energy)
         if process.endswith(self.altSignal) and process.replace(self.altSignal,"") in self.modes: 
             (production,decay, energy) = getHiggsProdDecMode(bin,process.replace("_SM",""),self.options)
-            print (bin, process)
             return self.getHiggsYieldScaleSM(production,decay, energy)
         if self.DC.isSignal[process]:
             raise RuntimeError, "Found a signal process '%s' that is not among the supported ones: %s" % (process, self.modes)
