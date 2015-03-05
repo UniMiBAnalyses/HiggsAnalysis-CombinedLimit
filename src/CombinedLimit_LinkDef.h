@@ -138,4 +138,19 @@
 #pragma link C++ class RooStarMomentMorph+;
 
 #pragma link C++ class RooMorphingPdf+;
+#pragma link C++ class RooSigPlusInt+;
+#pragma link C++ class RooBWHighMassGGH+;
+#pragma link C++ class RooCPSHighMassGGH+;
+#pragma link C++ class RooCPSHighMassGGHNoInterf+;
+#pragma link C++ class RooCPSHighMassVBF+;
+#pragma link C++ class RooCPSHighMassVBFNoInterf+;
+#pragma link C++ class RooVBFZZPdf+;
+#pragma link C++ class RooVBFZZPdf_v2+;
+#pragma link C++ class RooExpPoly+;
+#pragma link C++ class RooPowerLaw+;
+#pragma link C++ class RooPowerFunction+;
+#pragma link C++ class RooTH1DPdf+;
+#pragma link C++ class RooPowerExpPdf+;
+#pragma link C++ class RooErfPdf+;
+#pragma link C++ class RooChebyshevPDF+;
 #endif 
