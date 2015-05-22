@@ -151,12 +151,12 @@ bool MaxLikelihoodFit::runSpecific(RooWorkspace *w, RooStats::ModelConfig *mc_s,
       RooFitResult *res_prefit = 0;
       {     
             CloseCoutSentry sentry(verbose < 2);
-            res_prefit = nuisancePdf->fitTo(*globalData,
-            RooFit::Save(1),
-            RooFit::Minimizer(ROOT::Math::MinimizerOptions::DefaultMinimizerType().c_str(), ROOT::Math::MinimizerOptions::DefaultMinimizerAlgo().c_str()),
-            RooFit::Strategy(minimizerStrategy_),
-            RooFit::Minos(minos_ == "all")
-            );
+            //res_prefit = nuisancePdf->fitTo(*globalData,
+            //RooFit::Save(1),
+            //RooFit::Minimizer(ROOT::Math::MinimizerOptions::DefaultMinimizerType().c_str(), ROOT::Math::MinimizerOptions::DefaultMinimizerAlgo().c_str()),
+            //RooFit::Strategy(minimizerStrategy_),
+            //RooFit::Minos(minos_ == "all")
+            //);
       }
       if (fitOut.get() ) fitOut->WriteTObject(res_prefit, "nuisances_prefit_res");
       if (fitOut.get() ) fitOut->WriteTObject(nuis->snapshot(), "nuisances_prefit");
