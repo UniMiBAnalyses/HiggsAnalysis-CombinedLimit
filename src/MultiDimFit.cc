@@ -106,6 +106,8 @@ bool MultiDimFit::runSpecific(RooWorkspace *w, RooStats::ModelConfig *mc_s, RooS
 
     // Get PDF
     RooAbsPdf &pdf = *mc_s->GetPdf();
+    std::auto_ptr<RooArgSet> params(pdf.getParameters((const RooArgSet *)0));
+    RooArgSet snap; params->snapshot(snap);
 
     // Process POI not in list
     nOtherFloatingPoi_ = 0;
@@ -165,7 +167,7 @@ bool MultiDimFit::runSpecific(RooWorkspace *w, RooStats::ModelConfig *mc_s, RooS
             break;
         case Singles: if (res.get()) doSingles(*res); break;
         case Cross: doBox(*nll, cl, "box", true); break;
-        case Grid: doGrid(*nll); break;
+        case Grid: doGrid(*nll, snap); break;
         case RandomPoints: doRandomPoints(*nll); break;
         case FixedPoint: doFixedPoint(w,*nll); break;
         case Contour2D: doContour2D(*nll); break;
@@ -306,7 +308,7 @@ void MultiDimFit::doSingles(RooFitResult &res)
     }
 }
 
-void MultiDimFit::doGrid(RooAbsReal &nll) 
+void MultiDimFit::doGrid(RooAbsReal &nll, RooArgSet & snap_init) 
 {
     unsigned int n = poi_.size();
     //if (poi_.size() > 2) throw std::logic_error("Don't know how to do a grid with more than 2 POIs.");
@@ -349,9 +351,10 @@ void MultiDimFit::doGrid(RooAbsReal &nll)
 
             //if (verbose > 1) std::cout << "Point " << i << "/" << points_ << " " << poiVars_[0]->GetName() << " = " << x << std::endl;
              std::cout << "Point " << i << "/" << points_ << " " << poiVars_[0]->GetName() << " = " << x << std::endl;
-            *params = snap; 
+            *params = snap_init; 
             poiVals_[0] = x;
             poiVars_[0]->setVal(x);
+            poiVars_[0]->setConstant(true);
             // now we minimize
             bool ok = fastScan_ || (hasMaxDeltaNLLForProf_ && (nll.getVal() - nll0) > maxDeltaNLLForProf_) ? 
                         true : 

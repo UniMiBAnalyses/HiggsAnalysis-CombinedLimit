@@ -52,6 +52,8 @@ RooAbsData *asimovutils::asimovDatasetWithFit(RooStats::ModelConfig *mc, RooAbsD
         if (mc->GetNuisanceParameters() && verbose > 1) {
             std::cout << "Nuisance parameters after fit for asimov dataset: " << std::endl;
             mc->GetNuisanceParameters()->Print("V");
+            std::cout << "POIs have values: " << std::endl;
+            mc->GetParametersOfInterest()->Print("V");
         }
         toymcoptutils::SimPdfGenInfo newToyMC(*mc->GetPdf(), *mc->GetObservables(), false); 
         RooRealVar *weightVar = 0;

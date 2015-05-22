@@ -36,6 +36,7 @@
 
 using namespace RooStats;
 
+bool        FitterAlgoBase::resetOnFail_ = false;
 std::string FitterAlgoBase::minimizerAlgo_ = "Minuit2";
 std::string FitterAlgoBase::minimizerAlgoForMinos_ = "Minuit2,simplex";
 float       FitterAlgoBase::minimizerTolerance_ = 1e-1;
@@ -58,6 +59,7 @@ FitterAlgoBase::FitterAlgoBase(const char *title) :
     LimitAlgo(title)
 {
     options_.add_options()
+        ("resetOnFail",        boost::program_options::value<bool>(&resetOnFail_)->default_value(resetOnFail_), "Reset to initial parameter values on fit failure")
         ("minimizerAlgo",      boost::program_options::value<std::string>(&minimizerAlgo_)->default_value(minimizerAlgo_), "Choice of minimizer (Minuit vs Minuit2)")
         ("minimizerTolerance", boost::program_options::value<float>(&minimizerTolerance_)->default_value(minimizerTolerance_),  "Tolerance for minimizer")
         ("minimizerStrategy",  boost::program_options::value<int>(&minimizerStrategy_)->default_value(minimizerStrategy_),      "Stragegy for minimizer")
@@ -164,6 +166,9 @@ RooFitResult *FitterAlgoBase::doFit(RooAbsPdf &pdf, RooAbsData &data, const RooA
     RooFitResult *ret = 0;
     if (reuseNLL && nll.get() != 0)((cacheutils::CachingSimNLL&)(*nll)).setData(data);	// reuse nll but swap out the data
     else nll.reset(pdf.createNLL(data, constrain, RooFit::Extended(pdf.canBeExtended()), RooFit::Offset(true))); // make a new nll
+
+    std::auto_ptr<RooArgSet> params(nll->getParameters((const RooArgSet *)0));
+    params->snapshot(initialState_);
 
     double nll0 = nll->getVal();
     double delta68 = 0.5*ROOT::Math::chisquared_quantile_c(1-0.68,ndim);
@@ -289,13 +294,15 @@ RooFitResult *FitterAlgoBase::doFit(RooAbsPdf &pdf, RooAbsData &data, const RooA
 }
 
 double FitterAlgoBase::findCrossing(CascadeMinimizer &minim, RooAbsReal &nll, RooRealVar &r, double level, double rStart, double rBound) {
+    std::auto_ptr<RooArgSet> params(nll.getParameters((const RooArgSet *)0));
+    if (resetOnFail_) *params = initialState_;
     if (runtimedef::get("FITTER_NEW_CROSSING_ALGO")) {
         return findCrossingNew(minim, nll, r, level, rStart, rBound);
     }
     ProfileLikelihood::MinimizerSentry minimizerConfig(minimizerAlgoForMinos_, minimizerToleranceForMinos_);
     if (verbose) std::cout << "Searching for crossing at nll = " << level << " in the interval " << rStart << ", " << rBound << std::endl; 
     double rInc = stepSize_*(rBound - rStart);
-    r.setVal(rStart); 
+    r.setVal(rStart); r.setConstant(true);
     std::auto_ptr<RooFitResult> checkpoint;
     std::auto_ptr<RooArgSet>    allpars;
     bool ok = false;
@@ -304,7 +311,7 @@ double FitterAlgoBase::findCrossing(CascadeMinimizer &minim, RooAbsReal &nll, Ro
         ok = minim.improve(verbose-1);
         checkpoint.reset(minim.save());
     }
-    if (!ok) { std::cout << "Error: minimization failed at " << r.GetName() << " = " << rStart << std::endl; return NAN; }
+    if (!ok) { std::cout << "Error: minimization failed at " << r.GetName() << " = " << rStart << std::endl; /*return NAN;*/ }
     double here = nll.getVal();
     int nfail = 0;
     if (verbose > 0) { printf("      %s      lvl-here  lvl-there   stepping\n", r.GetName()); fflush(stdout); }
@@ -314,7 +321,8 @@ double FitterAlgoBase::findCrossing(CascadeMinimizer &minim, RooAbsReal &nll, Ro
             rStart -= rInc;
             rInc    = 0.5*(rBound-rStart);
         }
-        r.setVal(rStart);
+        if (resetOnFail_) *params = initialState_;
+        r.setVal(rStart); r.setConstant(true);
         nll.clearEvalErrorLog(); nll.getVal();
         if (nll.numEvalErrors() > 0) {
             ok = false;
@@ -336,7 +344,7 @@ double FitterAlgoBase::findCrossing(CascadeMinimizer &minim, RooAbsReal &nll, Ro
         if (verbose > 0) { printf("%f    %+.5f  %+.5f    %f\n", rStart, level-here, level-there, rInc); fflush(stdout); }
         if ( fabs(here - level) < 4*minimizerToleranceForMinos_ ) {
             // set to the right point with interpolation
-            r.setVal(rStart + (level-here)*(level-there)/(here-there));
+            r.setVal(rStart + (level-here)*(level-there)/(here-there)); r.setConstant(true);
             return r.getVal();
         } else if (here > level) {
             // I'm above the level that I wanted, this means I stepped too long

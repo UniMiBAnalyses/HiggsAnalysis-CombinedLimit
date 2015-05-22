@@ -28,6 +28,8 @@ public:
   virtual bool run(RooWorkspace *w, RooStats::ModelConfig *mc_s, RooStats::ModelConfig *mc_b, RooAbsData &data, double &limit, double &limitErr, const double *hint);
 
 protected:
+  static bool resetOnFail_;
+  RooArgSet initialState_;
   static std::string minimizerAlgo_, minimizerAlgoForMinos_;
   static float       minimizerTolerance_, minimizerToleranceForMinos_;
   static int         minimizerStrategy_, minimizerStrategyForMinos_;

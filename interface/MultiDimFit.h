@@ -62,7 +62,7 @@ protected:
 
   // variables
   void doSingles(RooFitResult &res) ;
-  void doGrid(RooAbsReal &nll) ;
+  void doGrid(RooAbsReal &nll, RooArgSet & snap_init) ;
   void doRandomPoints(RooAbsReal &nll) ;
   void doFixedPoint(RooWorkspace *w,RooAbsReal &nll) ;
   void doContour2D(RooAbsReal &nll) ;
