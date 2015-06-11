@@ -1064,7 +1064,7 @@ void FastVerticalInterpHistPdf2Base::syncTotal(FastTemplate &cache, const FastTe
 }
 
 void FastVerticalInterpHistPdf2::syncTotal() const {
-    LAUNCH_FUNCTION_TIMER(__timer__, __token__) // DEBUG
+    // LAUNCH_FUNCTION_TIMER(__timer__, __token__) // DEBUG
     if (_binParamList.getSize() > 0) {
       // If we're doing bb-lite, morph into _cache2 instead
       if (_cache2.size() == 0) _cache2 = _cache;
@@ -1078,7 +1078,7 @@ void FastVerticalInterpHistPdf2::syncTotal() const {
 }
 
 void FastVerticalInterpHistPdf2::syncBins() const {
-    LAUNCH_FUNCTION_TIMER(__timer__, __token__) // DEBUG
+    // LAUNCH_FUNCTION_TIMER(__timer__, __token__) // DEBUG
     if (_binParamList.getSize() > 0) {
       _cache.Clear(); // FIXME: not sure why I need to do this
       // printf("[SyncTotal]: %s\n", this->GetName());
@@ -1136,7 +1136,7 @@ FastVerticalInterpHistPdf2V::FastVerticalInterpHistPdf2V(const FastVerticalInter
         begin_ = bins.front();
         end_   = bins.back()+1;
         bins_.swap(bins); // want to keep this info around for later
-        //std::cout << "Created FastVerticalInterpHistPdf2V from " << hpdf.GetName() << ", aligned, " << (end_-begin_) << " bins." << std::endl;
+        // std::cout << "Created FastVerticalInterpHistPdf2V from " << hpdf.GetName() << ", aligned, " << (end_-begin_) << " bins." << std::endl;
     } else {
         nbins_ = bins.size();
         bins_.swap(bins);
@@ -1151,10 +1151,10 @@ FastVerticalInterpHistPdf2V::FastVerticalInterpHistPdf2V(const FastVerticalInter
         }
         blocks_.push_back(Block(istart,start,bins_.back()+1));
         if (blocks_.size() < 4*bins_.size()) {
-            //std::cout << "Created FastVerticalInterpHistPdf2V from " << hpdf.GetName() << ", block-aligned, " << bins_.size() << " bins, " <<  blocks_.size() << " blocks." << std::endl;
+            // std::cout << "Created FastVerticalInterpHistPdf2V from " << hpdf.GetName() << ", block-aligned, " << bins_.size() << " bins, " <<  blocks_.size() << " blocks." << std::endl;
             // bins_.clear(); // Don't clear here, want to keep this info for later
         } else {
-            //std::cout << "Created FastVerticalInterpHistPdf2V from " << hpdf.GetName() << ", non-aligned, " << bins_.size() << " bins, " <<  blocks_.size() << " blocks." << std::endl;
+            // std::cout << "Created FastVerticalInterpHistPdf2V from " << hpdf.GetName() << ", non-aligned, " << bins_.size() << " bins, " <<  blocks_.size() << " blocks." << std::endl;
             blocks_.clear();
         }
     }
@@ -1174,6 +1174,23 @@ void FastVerticalInterpHistPdf2V::fill(std::vector<Double_t> &out) const
         out.resize(bins_.size());
         for (int i = 0, n = bins_.size(); i < n; ++i) {
             out[i] = hpdf_._cache.GetBinContent(bins_[i]);
+        }
+    }
+}
+
+void FastVerticalInterpHistPdf2V::fillNoBins(std::vector<Double_t> &out) const 
+{
+    if (!hpdf_._sentry.good()) hpdf_.syncTotal();
+    if (begin_ != end_) {
+        out.resize(end_-begin_);
+        std::copy(& hpdf_._cache2.GetBinContent(begin_), & hpdf_._cache2.GetBinContent(end_), out.begin());
+    } else if (!blocks_.empty()) {
+        out.resize(nbins_);
+        for (auto b : blocks_) std::copy(& hpdf_._cache2.GetBinContent(b.begin), & hpdf_._cache2.GetBinContent(b.end), out.begin()+b.index);
+    } else {
+        out.resize(bins_.size());
+        for (int i = 0, n = bins_.size(); i < n; ++i) {
+            out[i] = hpdf_._cache2.GetBinContent(bins_[i]);
         }
     }
 }

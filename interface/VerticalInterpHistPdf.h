@@ -354,6 +354,7 @@ class FastVerticalInterpHistPdf2V {
     public: 
         FastVerticalInterpHistPdf2V(const FastVerticalInterpHistPdf2 &, const RooAbsData &data) ;
         void fill(std::vector<Double_t> &out) const ;
+        void fillNoBins(std::vector<Double_t> &out) const ;
         inline std::vector<int> bins() const { return bins_; } // need access to this info in CachingAddNLL when setting up bb-lite
     private:
         const FastVerticalInterpHistPdf2 & hpdf_;

@@ -52,6 +52,8 @@ bool        FitterAlgoBase::keepFailures_ = false;
 bool        FitterAlgoBase::protectUnbinnedChannels_ = false;
 double       FitterAlgoBase::nllValue_ = std::numeric_limits<double>::quiet_NaN();
 double       FitterAlgoBase::nll0Value_ = std::numeric_limits<double>::quiet_NaN();
+double      FitterAlgoBase::t_cpu_minim_ = 0.;
+bool        FitterAlgoBase::fit_status_ = 0.;
 FitterAlgoBase::ProfilingMode FitterAlgoBase::profileMode_ = ProfileAll;
 
 FitterAlgoBase::FitterAlgoBase(const char *title) :
@@ -95,7 +97,12 @@ bool FitterAlgoBase::run(RooWorkspace *w, RooStats::ModelConfig *mc_s, RooStats:
 
   static bool shouldCreateNLLBranch = saveNLL_;
   if (shouldCreateNLLBranch) { Combine::addBranch("nll", &nllValue_, "nll/D"); Combine::addBranch("nll0", &nll0Value_, "nll0/D"); shouldCreateNLLBranch = false; }
-
+  static bool createTimeBranch = true;
+  if (createTimeBranch) {
+    Combine::addBranch("t_cpu_minim", &t_cpu_minim_, "t_cpu_minim/D");
+    Combine::addBranch("fit_status", &fit_status_, "fit_status/O");
+    createTimeBranch = false;
+  }
   if (profileMode_ != ProfileAll && parametersToFreeze_.getSize() == 0) {
       switch (profileMode_) {
           case ProfileUnconstrained:
@@ -174,8 +181,11 @@ RooFitResult *FitterAlgoBase::doFit(RooAbsPdf &pdf, RooAbsData &data, const RooA
     CloseCoutSentry sentry(verbose < 3);    
     if (verbose>1) std::cout << "do first Minimization " << std::endl;
     TStopwatch tw; 
-    if (verbose) tw.Start();
+    // if (verbose) tw.Start();
+    tw.Start();
     bool ok = minim.minimize(verbose);
+    t_cpu_minim_ = tw.CpuTime()/60.;
+    fit_status_ = ok;
     if (verbose>1) {
        std::cout << "Minimized in : " ; tw.Print();
     }

@@ -279,7 +279,7 @@ void Combine::run(TString hlfFile, const std::string &dataset, double &limit, do
     }
 
 
-    if (verbose > 3) { std::cout << "Input workspace '" << workspaceName_ << "': \n"; w->Print("V"); }
+    // if (verbose > 3) { std::cout << "Input workspace '" << workspaceName_ << "': \n"; w->Print("V"); }
     RooRealVar *MH = w->var("MH");
     if (MH!=0) {
       if (verbose > 2) std::cerr << "Setting variable 'MH' in workspace to the higgs mass " << mass_ << std::endl;

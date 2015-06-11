@@ -44,6 +44,8 @@ protected:
 
   static bool  saveNLL_, keepFailures_, protectUnbinnedChannels_;
   static double nllValue_, nll0Value_;
+  static double t_cpu_minim_;
+  static bool fit_status_;
   std::auto_ptr<RooAbsReal> nll;
   // method that is implemented in the subclass
   virtual bool runSpecific(RooWorkspace *w, RooStats::ModelConfig *mc_s, RooStats::ModelConfig *mc_b, RooAbsData &data, double &limit, double &limitErr, const double *hint) = 0;

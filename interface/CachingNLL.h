@@ -144,6 +144,7 @@ class CachingAddNLL : public RooAbsReal {
         double SolveBBLite(double exp, double err, double obs) const;
         // don't want to solve bins unless the pdf sum has changed
         mutable ArgSetChecker bbChecker_;
+        mutable std::set<RooAbsArg*> clientSet_;
 };
 
 class CachingSimNLL  : public RooAbsReal {
