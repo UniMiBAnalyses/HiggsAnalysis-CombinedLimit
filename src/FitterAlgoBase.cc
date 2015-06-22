@@ -53,6 +53,7 @@ bool        FitterAlgoBase::protectUnbinnedChannels_ = false;
 double       FitterAlgoBase::nllValue_ = std::numeric_limits<double>::quiet_NaN();
 double       FitterAlgoBase::nll0Value_ = std::numeric_limits<double>::quiet_NaN();
 FitterAlgoBase::ProfilingMode FitterAlgoBase::profileMode_ = ProfileAll;
+bool        FitterAlgoBase::altCommit_ = false;
 
 FitterAlgoBase::FitterAlgoBase(const char *title) :
     LimitAlgo(title)
@@ -73,6 +74,7 @@ FitterAlgoBase::FitterAlgoBase(const char *title) :
         ("saveNLL",  "Save the negative log-likelihood at the minimum in the output tree (note: value is relative to the pre-fit state)")
         ("keepFailures",  "Save the results even if the fit is declared as failed (for NLL studies)")
         ("protectUnbinnedChannels", "Protect PDF from going negative in unbinned channels")
+        ("altCommit", "Alternative mode for commiting points to the output tree")
     ;
 }
 
@@ -81,6 +83,7 @@ void FitterAlgoBase::applyOptionsBase(const boost::program_options::variables_ma
     saveNLL_ = vm.count("saveNLL");
     keepFailures_ = vm.count("keepFailures");
     protectUnbinnedChannels_ = vm.count("protectUnbinnedChannels");
+    altCommit_ = vm.count("altCommit");
     std::string profileMode = vm["profilingMode"].as<std::string>();
     if      (profileMode == "all")           profileMode_ = ProfileAll;
     else if (profileMode == "unconstrained") profileMode_ = ProfileUnconstrained;
@@ -207,6 +210,7 @@ RooFitResult *FitterAlgoBase::doFit(RooAbsPdf &pdf, RooAbsData &data, const RooA
         utils::setAllConstant(frozenParameters, false);
         return ret;
     }
+    if (altCommit_) this->doCommitPoint(); // Save the best-fit point
     
     for (int i = 0, n = rs.getSize(); i < n; ++i) {
         // if this is not the first fit, reset parameters  
@@ -269,10 +273,21 @@ RooFitResult *FitterAlgoBase::doFit(RooAbsPdf &pdf, RooAbsData &data, const RooA
             assert(!std::isnan(r0));
             // high error
             double hi68 = findCrossing(minim2, *nll, r, threshold68, r0,   rMax);
+            if (altCommit_) {
+              // Might have interpolated to find hi68, so should fit one more time
+              // to put params at best-fit for this r
+              minim2.improve(verbose-1);
+              this->doCommitPoint();
+            }
             double hi95 = do95_ ? findCrossing(minim2, *nll, r, threshold95, std::isnan(hi68) ? r0 : hi68, std::max(rMax, std::isnan(hi68*2-r0) ? r0 : hi68*2-r0)) : r0;
             // low error 
             *allpars = RooArgSet(ret->floatParsFinal()); r.setVal(r0); r.setConstant(true);
-            double lo68 = findCrossing(minim2, *nll, r, threshold68, r0,   rMin); 
+            double lo68 = findCrossing(minim2, *nll, r, threshold68, r0,   rMin);
+            if (altCommit_) {
+              // And again for the lower crossing...
+              minim2.improve(verbose-1);
+              this->doCommitPoint();
+            }
             double lo95 = do95_ ? findCrossing(minim2, *nll, r, threshold95, std::isnan(lo68) ? r0 : lo68, rMin) : r0;
 
             rf.setAsymError(!std::isnan(lo68) ? lo68 - r0 : 0, !std::isnan(hi68) ? hi68 - r0 : 0);

@@ -138,7 +138,7 @@ bool MultiDimFit::runSpecific(RooWorkspace *w, RooStats::ModelConfig *mc_s, RooS
 		for(unsigned int j=0; j<specifiedFuncNames_.size(); j++){
 			specifiedFuncVals_[j]=specifiedFunc_[j]->getVal();
 		}
-		Combine::commitPoint(/*expected=*/false, /*quantile=*/1.); // otherwise we get it multiple times
+		if (!altCommit_) Combine::commitPoint(/*expected=*/false, /*quantile=*/1.); // otherwise we get it multiple times
 	}
     }
    
@@ -147,7 +147,6 @@ bool MultiDimFit::runSpecific(RooWorkspace *w, RooStats::ModelConfig *mc_s, RooS
     if (algo_ != None && algo_ != Singles) {
         nll.reset(pdf.createNLL(data, constrainCmdArg, RooFit::Extended(pdf.canBeExtended())));
     } 
-    
     //set snapshot for best fit
     if (!loadedSnapshot_) w->saveSnapshot("MultiDimFit",w->allVars());
     
@@ -186,6 +185,19 @@ bool MultiDimFit::runSpecific(RooWorkspace *w, RooStats::ModelConfig *mc_s, RooS
     }
     
     return true;
+}
+
+void MultiDimFit::doCommitPoint() {
+  for (int i = 0, n = poi_.size(); i < n; ++i) {
+    poiVals_[i] = poiVars_[i]->getVal();
+  }
+  for(unsigned int j=0; j<specifiedNuis_.size(); j++){
+    specifiedVals_[j]=specifiedVars_[j]->getVal();
+  }
+  for(unsigned int j=0; j<specifiedFuncNames_.size(); j++){
+    specifiedFuncVals_[j]=specifiedFunc_[j]->getVal();
+  }
+  Combine::commitPoint(/*expected=*/false, /*quantile=*/1.); // otherwise we get it multiple times
 }
 
 void MultiDimFit::initOnce(RooWorkspace *w, RooStats::ModelConfig *mc_s) {
@@ -303,11 +315,11 @@ void MultiDimFit::doSingles(RooFitResult &res)
         double hiErr95 = +(do95_ && rf->hasRange("err95") ? rf->getMax("err95") - bestFitVal : 0);
         double loErr95 = -(do95_ && rf->hasRange("err95") ? rf->getMin("err95") - bestFitVal : 0);
 
-        poiVals_[i] = bestFitVal - loErr; Combine::commitPoint(true, /*quantile=*/0.32);
-        poiVals_[i] = bestFitVal + hiErr; Combine::commitPoint(true, /*quantile=*/0.32);
+        poiVals_[i] = bestFitVal - loErr; if (!altCommit_) Combine::commitPoint(true, /*quantile=*/0.32);
+        poiVals_[i] = bestFitVal + hiErr; if (!altCommit_) Combine::commitPoint(true, /*quantile=*/0.32);
         if (do95_ && rf->hasRange("err95")) {
-            poiVals_[i] = rf->getMax("err95"); Combine::commitPoint(true, /*quantile=*/0.05);
-            poiVals_[i] = rf->getMin("err95"); Combine::commitPoint(true, /*quantile=*/0.05);
+            poiVals_[i] = rf->getMax("err95"); if (!altCommit_) Combine::commitPoint(true, /*quantile=*/0.05);
+            poiVals_[i] = rf->getMin("err95"); if (!altCommit_) Combine::commitPoint(true, /*quantile=*/0.05);
             poiVals_[i] = bestFitVal;
             printf("   %*s :  %+8.3f   %+6.3f/%+6.3f (68%%)    %+6.3f/%+6.3f (95%%) \n", len, poi_[i].c_str(), 
                     poiVals_[i], -loErr, hiErr, loErr95, -hiErr95);
