@@ -41,12 +41,14 @@ protected:
   enum ProfilingMode { ProfileAll, ProfileUnconstrained, ProfilePOI, NoProfiling };
   static ProfilingMode profileMode_;
   RooArgSet parametersToFreeze_;
+  std::vector<std::pair<std::string, float>> nudges_;
 
   static bool  saveNLL_, keepFailures_, protectUnbinnedChannels_;
   static double nllValue_, nll0Value_;
   std::auto_ptr<RooAbsReal> nll;
 
   static bool altCommit_;
+  static std::string nudge_;
   // method that is implemented in the subclass
   virtual bool runSpecific(RooWorkspace *w, RooStats::ModelConfig *mc_s, RooStats::ModelConfig *mc_b, RooAbsData &data, double &limit, double &limitErr, const double *hint) = 0;
 

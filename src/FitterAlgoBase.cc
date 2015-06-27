@@ -54,6 +54,7 @@ double       FitterAlgoBase::nllValue_ = std::numeric_limits<double>::quiet_NaN(
 double       FitterAlgoBase::nll0Value_ = std::numeric_limits<double>::quiet_NaN();
 FitterAlgoBase::ProfilingMode FitterAlgoBase::profileMode_ = ProfileAll;
 bool        FitterAlgoBase::altCommit_ = false;
+std::string FitterAlgoBase::nudge_ = "";
 
 FitterAlgoBase::FitterAlgoBase(const char *title) :
     LimitAlgo(title)
@@ -75,6 +76,7 @@ FitterAlgoBase::FitterAlgoBase(const char *title) :
         ("keepFailures",  "Save the results even if the fit is declared as failed (for NLL studies)")
         ("protectUnbinnedChannels", "Protect PDF from going negative in unbinned channels")
         ("altCommit", "Alternative mode for commiting points to the output tree")
+        ("nudge", boost::program_options::value<std::string>(&nudge_)->default_value(nudge_), "PARAM1:NUDGE1,PARAM2:NUDGE2...")
     ;
 }
 
@@ -89,6 +91,20 @@ void FitterAlgoBase::applyOptionsBase(const boost::program_options::variables_ma
     else if (profileMode == "unconstrained") profileMode_ = ProfileUnconstrained;
     else if (profileMode == "poi")           profileMode_ = ProfilePOI;
     else if (profileMode == "none")          profileMode_ = NoProfiling;
+    if (nudge_ != "") {
+      std::vector<std::string> tmp1;
+      boost::split(tmp1, nudge_, boost::is_any_of(","));
+      for (auto t1 : tmp1) {
+       std::vector<std::string> tmp2;
+       boost::split(tmp2, t1, boost::is_any_of("="));
+       if (tmp2.size() == 2) {
+        auto param = tmp2[0];
+        auto val = boost::lexical_cast<float>(tmp2[1]);
+        std::cout << "Will nudge: " << param << "=" << val << "\n";
+        nudges_.push_back(std::make_pair(param, val));
+       }
+      }
+    }
     else throw std::invalid_argument("option 'profilingMode' can only take as values 'all', 'none', 'poi' and 'unconstrained' (at least for now)\n");
 }
 
@@ -313,9 +329,19 @@ double FitterAlgoBase::findCrossing(CascadeMinimizer &minim, RooAbsReal &nll, Ro
     r.setVal(rStart); 
     std::auto_ptr<RooFitResult> checkpoint;
     std::auto_ptr<RooArgSet>    allpars;
+    if (allpars.get() == 0) allpars.reset(nll.getParameters((const RooArgSet *)0));
     bool ok = false;
     {
         CloseCoutSentry sentry(verbose < 3);    
+        // Before we minimize we nudge
+        for (auto p : nudges_) {
+          RooRealVar *rrv =(RooRealVar*)&(*allpars)[p.first.c_str()];
+          float nudge = p.second;
+          if (rrv->hasMax() && (nudge + rrv->getVal()) >= rrv->getMax()) {
+            nudge = (rrv->getMax() - rrv->getVal()) / 2.;
+          }
+          rrv->setVal(rrv->getVal() + nudge);
+        }
         ok = minim.improve(verbose-1);
         checkpoint.reset(minim.save());
     }
@@ -335,6 +361,14 @@ double FitterAlgoBase::findCrossing(CascadeMinimizer &minim, RooAbsReal &nll, Ro
             ok = false;
         } else {
             CloseCoutSentry sentry(verbose < 3);    
+            for (auto p : nudges_) {
+              RooRealVar *rrv =(RooRealVar*)&(*allpars)[p.first.c_str()];
+              float nudge = p.second;
+              if (rrv->hasMax() && (nudge + rrv->getVal()) >= rrv->getMax()) {
+                nudge = (rrv->getMax() - rrv->getVal()) / 2.;
+              }
+              rrv->setVal(rrv->getVal() + nudge);
+            }
             ok = minim.improve(verbose-1);
         }
         if (!ok) { 
