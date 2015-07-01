@@ -91,6 +91,7 @@ void FitterAlgoBase::applyOptionsBase(const boost::program_options::variables_ma
     else if (profileMode == "unconstrained") profileMode_ = ProfileUnconstrained;
     else if (profileMode == "poi")           profileMode_ = ProfilePOI;
     else if (profileMode == "none")          profileMode_ = NoProfiling;
+    else throw std::invalid_argument("option 'profilingMode' can only take as values 'all', 'none', 'poi' and 'unconstrained' (at least for now)\n");
     if (nudge_ != "") {
       std::vector<std::string> tmp1;
       boost::split(tmp1, nudge_, boost::is_any_of(","));
@@ -105,7 +106,6 @@ void FitterAlgoBase::applyOptionsBase(const boost::program_options::variables_ma
        }
       }
     }
-    else throw std::invalid_argument("option 'profilingMode' can only take as values 'all', 'none', 'poi' and 'unconstrained' (at least for now)\n");
 }
 
 bool FitterAlgoBase::run(RooWorkspace *w, RooStats::ModelConfig *mc_s, RooStats::ModelConfig *mc_b, RooAbsData &data, double &limit, double &limitErr, const double *hint) { 
