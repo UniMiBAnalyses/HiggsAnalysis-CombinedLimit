@@ -182,7 +182,12 @@ bool MultiDimFit::runSpecific(RooWorkspace *w, RooStats::ModelConfig *mc_s, RooS
             }
             if(res.get() && doHesse_) saveResult(*res);
             break;
-        case Singles: if (res.get()) { doSingles(*res); saveResult(*res); } break;
+        case Singles:
+            if (res.get()) {
+              doSingles(*res);
+              if (doHesse_) saveResult(*res);
+            }
+            break;
         case Cross: doBox(*nll, cl, "box", true); break;
         case Grid: doGrid(*nll); break;
         case RandomPoints: doRandomPoints(*nll); break;
