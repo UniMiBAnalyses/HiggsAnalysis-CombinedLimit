@@ -43,6 +43,7 @@ bool MultiDimFit::hasMaxDeltaNLLForProf_ = false;
 bool MultiDimFit::squareDistPoiStep_ = false;
 float MultiDimFit::maxDeltaNLLForProf_ = 200;
 float MultiDimFit::autoRange_ = -1.0;
+bool MultiDimFit::doHesse_ = false;
 
   std::string MultiDimFit::saveSpecifiedFuncs_;
   std::string MultiDimFit::saveSpecifiedNuis_;
@@ -74,6 +75,7 @@ MultiDimFit::MultiDimFit() :
 	("saveSpecifiedFunc",   boost::program_options::value<std::string>(&saveSpecifiedFuncs_)->default_value(""), "Save specified function values (default = none)")
 	("saveInactivePOI",   boost::program_options::value<bool>(&saveInactivePOI_)->default_value(saveInactivePOI_), "Save inactive POIs in output (1) or not (0, default)")
         ("out",                boost::program_options::value<std::string>(&out_)->default_value(out_), "Directory to put output in")
+        ("doHesse","Calculate the covariance matrix with HESSE after the initial fit")
       ;
 }
 
@@ -104,6 +106,7 @@ void MultiDimFit::applyOptions(const boost::program_options::variables_map &vm)
     hasMaxDeltaNLLForProf_ = !vm["maxDeltaNLLForProf"].defaulted();
     loadedSnapshot_ = !vm["snapshotName"].defaulted();
     name_ = vm["name"].defaulted() ?  std::string() : vm["name"].as<std::string>();
+    doHesse_ = (vm.count("doHesse") > 0);
 }
 
 bool MultiDimFit::runSpecific(RooWorkspace *w, RooStats::ModelConfig *mc_s, RooStats::ModelConfig *mc_b, RooAbsData &data, double &limit, double &limitErr, const double *hint) { 
@@ -129,7 +132,7 @@ bool MultiDimFit::runSpecific(RooWorkspace *w, RooStats::ModelConfig *mc_s, RooS
     const RooCmdArg &constrainCmdArg = withSystematics  ? RooFit::Constrain(*mc_s->GetNuisanceParameters()) : RooCmdArg();
     std::auto_ptr<RooFitResult> res;
     if ( algo_ <= Singles || !loadedSnapshot_ ){
-    	res.reset(doFit(pdf, data, (algo_ <= Singles ? poiList_ : RooArgList()), constrainCmdArg, false, 1, true, false)); 
+       res.reset(doFit(pdf, data, (algo_ == Singles ? poiList_ : RooArgList()), constrainCmdArg, doHesse_, 1, true, doHesse_));
     }
     if(w->var("r")) {w->var("r")->Print();}
     if ( loadedSnapshot_ || res.get() || keepFailures_) {
@@ -177,7 +180,7 @@ bool MultiDimFit::runSpecific(RooWorkspace *w, RooStats::ModelConfig *mc_s, RooS
                     printf("   %*s :  %+8.3f\n", len, poi_[i].c_str(), poiVals_[i]);
                 }
             }
-            if(res.get()) saveResult(*res);
+            if(res.get() && doHesse_) saveResult(*res);
             break;
         case Singles: if (res.get()) { doSingles(*res); saveResult(*res); } break;
         case Cross: doBox(*nll, cl, "box", true); break;

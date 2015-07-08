@@ -39,6 +39,7 @@ protected:
   static std::string out_; 
   std::auto_ptr<TFile> fitOut;
   static std::string name_;
+  static bool doHesse_;
 
   // options    
   static unsigned int points_, firstPoint_, lastPoint_;
