@@ -187,9 +187,20 @@ RooFitResult *FitterAlgoBase::doFit(RooAbsPdf &pdf, RooAbsData &data, const RooA
     double nll0 = nll->getVal();
     double delta68 = 0.5*ROOT::Math::chisquared_quantile_c(1-0.68,ndim);
     double delta95 = 0.5*ROOT::Math::chisquared_quantile_c(1-0.95,ndim);
+    /*
+        RooMinimizer minim(*nll);
+        minim.setStrategy(minimizerStrategy_);
+        minim.setEps(minimizerTolerance_);
+        minim.setOffsetting(1);
+        minim.optimizeConst(2);
+        minim.minimize("Minuit2","migrad");
+        //minim.minimize("Minuit2","migrad");
+        minim.hesse();
+        //RooFitResult *res = minim.save();
+    */
     CascadeMinimizer minim(*nll, CascadeMinimizer::Unconstrained, rs.getSize() ? dynamic_cast<RooRealVar*>(rs.first()) : 0);
     minim.setStrategy(minimizerStrategy_);
-    minim.setErrorLevel(delta68);
+    // minim.setErrorLevel(delta68);
     CloseCoutSentry sentry(verbose < 3);    
     if (verbose>1) std::cout << "do first Minimization " << std::endl;
     TStopwatch tw; 
@@ -199,9 +210,9 @@ RooFitResult *FitterAlgoBase::doFit(RooAbsPdf &pdf, RooAbsData &data, const RooA
        std::cout << "Minimized in : " ; tw.Print();
     }
     nll0Value_ =  nll0;
-    nllValue_ =  nll->getVal() - nll0;
+    //nllValue_ =  nll->getVal() - nll0;
     if (!ok && !keepFailures_) { std::cout << "Initial minimization failed. Aborting." << std::endl; return 0; }
-    if (doHesse) minim.minimizer().hesse();
+    if (doHesse) minim.hesse();
     sentry.clear();
     ret = (saveFitResult || rs.getSize() ? minim.save() : new RooFitResult("dummy","success"));
     if (verbose > 1 && ret != 0 && (saveFitResult || rs.getSize())) { ret->Print("V");  }
