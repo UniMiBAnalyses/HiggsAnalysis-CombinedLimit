@@ -8,6 +8,7 @@
 #include "RooStats/ModelConfig.h"
 #include "Math/MinimizerOptions.h"
 #include "Math/IOptions.h"
+#include "RooFitResult.h"
 
 int main(int argc, char **argv) {
     if (argc <= 1) { printf("Usage: %s file -w workspace(=w) -c modelConfig(=ModelConfig) -D dataset(=data_obs)  -S snapshot  -s strategy(=0) -t tolerance(=1) -M param_to_run_minos_on  \n",argv[0]); return 1; }
@@ -106,7 +107,12 @@ int main(int argc, char **argv) {
         minim.setEps(tolerance);
         minim.setOffsetting(1);
         minim.optimizeConst(optimize);
-        minim.minimize("Minuit2","minimize");
+        minim.minimize("Minuit2","migrad");
+        minim.hesse();
+        RooFitResult *res = minim.save();
+        TFile f("fitresult.root", "recreate");
+        res->Write();
+        f.Close();
         if (minos) { minim.minos(poi); w->var(minos)->Print(""); }
     }
     timer.Stop(); printf("Done in %.2f min (cpu), %.2f min (real)\n", timer.CpuTime()/60., timer.RealTime()/60.);
