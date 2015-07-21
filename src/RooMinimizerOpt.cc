@@ -17,6 +17,7 @@ RooMinimizerOpt::RooMinimizerOpt(RooAbsReal& function) :
     delete _fcn;
     _fcn = new RooMinimizerFcnOpt(_func,this,_verbose); 
     setEps(ROOT::Math::MinimizerOptions::DefaultTolerance());
+     _theFitter->Config().MinimizerOptions().SetMaxFunctionCalls(50000*_fcn->NDim());
 }
 
 Double_t

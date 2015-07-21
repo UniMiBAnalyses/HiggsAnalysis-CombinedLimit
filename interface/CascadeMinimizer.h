@@ -75,6 +75,8 @@ class CascadeMinimizer {
         static bool oldFallback_;
         /// storage level for minuit2 (toggles storing of intermediate covariances)
         static int minuit2StorageLevel_;
+        /// set a different strategy for hesse
+        static int hesseStrategy_;
 
 	static double discreteMinTol_;
 

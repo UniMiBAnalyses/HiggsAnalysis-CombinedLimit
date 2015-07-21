@@ -18,6 +18,7 @@ boost::program_options::options_description CascadeMinimizer::options_("Cascade 
 std::vector<CascadeMinimizer::Algo> CascadeMinimizer::fallbacks_;
 bool CascadeMinimizer::preScan_;
 int  CascadeMinimizer::preFit_ = 0;
+int CascadeMinimizer::hesseStrategy_ = -1;
 bool CascadeMinimizer::poiOnlyFit_;
 bool CascadeMinimizer::singleNuisFit_;
 bool CascadeMinimizer::setZeroPoint_ = true;
@@ -97,6 +98,7 @@ bool CascadeMinimizer::improveOnce(int verbose)
 }
 
 bool CascadeMinimizer::hesse(int verbose) {
+   if (hesseStrategy_ >= 0) minimizer_->setStrategy(hesseStrategy_);
    minimizer_->setPrintLevel(verbose-1);
    if (setZeroPoint_) {
       cacheutils::CachingSimNLL *simnll = dynamic_cast<cacheutils::CachingSimNLL *>(&nll_);
@@ -490,6 +492,7 @@ void CascadeMinimizer::initOptions()
         ("cminPoiOnlyFit",  "Do first a fit floating only the parameter of interest")
         ("cminPreScan",  "Do a scan before first minimization")
         ("cminPreFit", boost::program_options::value<int>(&preFit_)->default_value(preFit_), "if set to a value N > 0, it will perform a pre-fit with strategy (N-1) with frozen nuisance parameters.")
+        ("cminHesseStrategy", boost::program_options::value<int>(&hesseStrategy_)->default_value(hesseStrategy_), "use a different strategy for the call to hesse")
         ("cminSingleNuisFit", "Do first a minimization of each nuisance parameter individually")
         ("cminFallbackAlgo", boost::program_options::value<std::vector<std::string> >(), "Fallback algorithms if the default minimizer fails (can use multiple ones). Syntax is algo[,subalgo][,strategy][:tolerance]")
         ("cminSetZeroPoint", boost::program_options::value<bool>(&setZeroPoint_)->default_value(setZeroPoint_), "Change the reference point of the NLL to be zero during minimization")
