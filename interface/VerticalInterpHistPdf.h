@@ -167,7 +167,7 @@ private:
 
 class FastVerticalInterpHistPdfV {
     public: 
-        FastVerticalInterpHistPdfV(const FastVerticalInterpHistPdf &, const RooAbsData &data) ;
+        FastVerticalInterpHistPdfV(const FastVerticalInterpHistPdf &, const RooAbsData &data, bool includeZeroWeights=false) ;
         void fill(std::vector<Double_t> &out) const ;
     private:
         const FastVerticalInterpHistPdf & hpdf_;
@@ -352,7 +352,7 @@ private:
 };
 class FastVerticalInterpHistPdf2V {
     public: 
-        FastVerticalInterpHistPdf2V(const FastVerticalInterpHistPdf2 &, const RooAbsData &data) ;
+        FastVerticalInterpHistPdf2V(const FastVerticalInterpHistPdf2 &, const RooAbsData &data, bool includeZeroWeights=false) ;
         void fill(std::vector<Double_t> &out) const ;
         inline std::vector<int> bins() const { return bins_; } // need access to this info in CachingAddNLL when setting up bb-lite
     private:
