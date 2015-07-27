@@ -601,7 +601,7 @@ void FastVerticalInterpHistPdf3D::setupCaches() const {
 }
 
 
-FastVerticalInterpHistPdfV::FastVerticalInterpHistPdfV(const FastVerticalInterpHistPdf &hpdf, const RooAbsData &data) :
+FastVerticalInterpHistPdfV::FastVerticalInterpHistPdfV(const FastVerticalInterpHistPdf &hpdf, const RooAbsData &data, bool includeZeroWeights) :
     hpdf_(hpdf),begin_(0),end_(0)
 {
     // check init
@@ -614,7 +614,7 @@ FastVerticalInterpHistPdfV::FastVerticalInterpHistPdfV(const FastVerticalInterpH
     bool aligned = true;
     for (int i = 0, n = data.numEntries(); i < n; ++i) {
         obs = *data.get(i);
-        if (data.weight() == 0) continue;
+        if (data.weight() == 0 && !includeZeroWeights) continue;
         int idx = hpdf._cache.FindBin(x.getVal());
         if (!bins.empty() && idx != bins.back() + 1) aligned = false;
         bins.push_back(idx);
@@ -1105,7 +1105,7 @@ void FastVerticalInterpHistPdf2D2::syncTotal() const {
     //printf("Normalized result\n");  _cache.Dump();
 }
 
-FastVerticalInterpHistPdf2V::FastVerticalInterpHistPdf2V(const FastVerticalInterpHistPdf2 &hpdf, const RooAbsData &data) :
+FastVerticalInterpHistPdf2V::FastVerticalInterpHistPdf2V(const FastVerticalInterpHistPdf2 &hpdf, const RooAbsData &data, bool includeZeroWeights) :
     hpdf_(hpdf),begin_(0),end_(0)
 {
     // check init
@@ -1125,7 +1125,7 @@ FastVerticalInterpHistPdf2V::FastVerticalInterpHistPdf2V(const FastVerticalInter
     bool aligned = true;
     for (int i = 0, n = data.numEntries(); i < n; ++i) {
         obs = *data.get(i);
-        if (data.weight() == 0) continue;
+        if (data.weight() == 0 && !includeZeroWeights) continue;
         int idx = hpdf._cache.FindBin(x.getVal());
         if (!bins.empty() && idx != bins.back() + 1) aligned = false;
         bins.push_back(idx);
