@@ -94,6 +94,12 @@ bool        HybridNew::reportPVal_ = false;
 float HybridNew::confidenceToleranceForToyScaling_ = 0.2;
 float HybridNew::maxProbability_ = 0.999;
 #define EPS 1e-6
+bool HybridNew::debug_save_tree_ = false;
+bool HybridNew::debug_save_data_ = false;
+bool HybridNew::debug_only_null_ = false;
+bool HybridNew::debug_only_alt_ = false;
+double HybridNew::debug_q_min_ = 0.;
+double HybridNew::debug_q_max_ = 0.;
  
 HybridNew::HybridNew() : 
 LimitAlgo("HybridNew specific options") {
@@ -142,7 +148,13 @@ LimitAlgo("HybridNew specific options") {
         ("importantContours",boost::program_options::value<std::string>(&scaleAndConfidenceSelection_)->default_value(scaleAndConfidenceSelection_), "Throw less toys far from interesting contours , format : CL_1,CL_2,..CL_N (--toysH scaled down when prob is far from any of CL_i) ")
         ("maxProbability", boost::program_options::value<float>(&maxProbability_)->default_value(maxProbability_),  "when point is >  maxProbability countour, don't bother throwing toys")
         ("confidenceTolerance", boost::program_options::value<float>(&confidenceToleranceForToyScaling_)->default_value(confidenceToleranceForToyScaling_),  "Determine what 'far' means for adatptiveToys. (relative in terms of (1-cl))")
-	
+        ("debug_saveTree", boost::program_options::value<bool>(&debug_save_tree_)->default_value(debug_save_tree_),  "Save the debug tree")
+        ("debug_saveData", boost::program_options::value<bool>(&debug_save_data_)->default_value(debug_save_tree_),  "Save toy data histograms, but only when deltaNLL is in specified range")
+        ("debug_q_min", boost::program_options::value<double>(&debug_q_min_)->default_value(debug_q_min_),  "Min of deltaNLL range")
+        ("debug_q_max", boost::program_options::value<double>(&debug_q_max_)->default_value(debug_q_max_),  "Max of deltaNLL range")
+        ("debug_onlyNullToys", boost::program_options::value<bool>(&debug_only_null_)->default_value(debug_only_null_),  "Only generate toys for the null hypothesis")
+        ("debug_onlyAltToys", boost::program_options::value<bool>(&debug_only_alt_)->default_value(debug_only_alt_),  "Only generate toys for the alt hypothesis")
+
     ;
 }
 
@@ -841,6 +853,7 @@ std::auto_ptr<RooStats::HybridCalculator> HybridNew::create(RooWorkspace *w, Roo
       if (optimizeTestStatistics_) {
           setup.qvar.reset(new ProfiledLikelihoodRatioTestStatOpt(*mc_s->GetObservables(), *pdfB, *mc_s->GetPdf(), mc_s->GetNuisanceParameters(), paramsZero, params));
           ((ProfiledLikelihoodRatioTestStatOpt&)*setup.qvar).setPrintLevel(verbose);
+          ((ProfiledLikelihoodRatioTestStatOpt&)*setup.qvar).SetupOutput(debug_save_tree_, debug_save_data_, debug_q_min_, debug_q_max_);
       } else {   
           setup.qvar.reset(new RatioOfProfiledLikelihoodsTestStat(*mc_s->GetPdf(), *pdfB, setup.modelConfig.GetSnapshot()));
           ((RatioOfProfiledLikelihoodsTestStat&)*setup.qvar).SetSubtractMLE(false);
@@ -952,7 +965,7 @@ std::auto_ptr<RooStats::HybridCalculator> HybridNew::create(RooWorkspace *w, Roo
     
   } else {
       // need both, but more S+B than B 
-      hc->SetToys(fullBToys_ ? nToys_ : int(0.25*nToys_), nToys_);
+      hc->SetToys(debug_only_alt_ ? 0 : (fullBToys_ ? nToys_ : int(0.25*nToys_)), debug_only_null_ ? 0 : nToys_);
       //for two sigma bands need an equal number of B
       if (expectedFromGrid_ && (fabs(0.5-quantileForExpectedFromGrid_)>=0.4) ) {
         hc->SetToys(nToys_, nToys_);

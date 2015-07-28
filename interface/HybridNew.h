@@ -73,6 +73,14 @@ private:
   static float confidenceToleranceForToyScaling_;
   static float adaptiveToys_;
 
+  static bool debug_save_tree_;
+  static bool debug_save_data_;
+  static bool debug_only_null_;
+  static bool debug_only_alt_;
+  static double debug_q_min_;
+  static double debug_q_max_;
+
+
   // graph, used to compute the limit, not just for plotting!
   std::auto_ptr<TGraphErrors> limitPlot_;
  

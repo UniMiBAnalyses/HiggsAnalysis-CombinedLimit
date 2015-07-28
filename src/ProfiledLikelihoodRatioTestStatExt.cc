@@ -3,6 +3,9 @@
 #include "../interface/CloseCoutSentry.h"
 #include "../interface/CachingNLL.h"
 #include "../interface/utils.h"
+#include "TFile.h"
+#include "TTree.h"
+#include "TH1F.h"
 #include <stdexcept>
 #include <RooRealVar.h>
 #include <RooMinimizer.h>
@@ -58,6 +61,41 @@ ProfiledLikelihoodRatioTestStatOpt::ProfiledLikelihoodRatioTestStatOpt(
         nuisances_.addClone(*nuisances);
         DBG(DBG_TestStat_params, (std::cout << "Nuisances" << std::endl))  DBG(DBG_TestStat_params, (nuisances_.Print("V")))
     }
+    f_out_ = nullptr;
+    t_out_ = nullptr;
+    save_data_min_ = 0.;
+    save_data_max_ = 0.;
+    save_data_ = false;
+    save_tree_ = false;
+    t_deltaNLL_ = 0.;
+    t_fit_nul_ = false;
+    t_fit_alt_ = false;
+    t_index_ = 0;
+}
+
+void ProfiledLikelihoodRatioTestStatOpt::SetupOutput(bool save_tree, bool save_data, double data_min_q, double data_max_q) {
+    save_tree_ = save_tree;
+    save_data_ = save_data;
+    save_data_min_ = data_min_q;
+    save_data_max_ = data_max_q;
+    if (save_tree_ || save_data_) {
+        f_out_ = new TFile("debug_fits.root", "RECREATE");
+        if (save_tree_) {
+            t_out_ = new TTree("debug_fits", "debug_fits");
+            t_out_->Branch("deltaNLL", &t_deltaNLL_);
+            t_out_->Branch("fit_nul", &t_fit_nul_);
+            t_out_->Branch("fit_alt", &t_fit_alt_);
+            t_out_->Branch("index", &t_index_);
+        }
+    }
+}
+
+ProfiledLikelihoodRatioTestStatOpt::~ProfiledLikelihoodRatioTestStatOpt() {
+    if (f_out_) {
+        t_out_->Write();
+        f_out_->Close();
+        delete f_out_;
+    }
 }
 
 Double_t ProfiledLikelihoodRatioTestStatOpt::Evaluate(RooAbsData& data, RooArgSet& nullPOI)
@@ -87,10 +125,33 @@ Double_t ProfiledLikelihoodRatioTestStatOpt::Evaluate(RooAbsData& data, RooArgSe
     
     DBG(DBG_TestStat_params, (printf("Pln: null = %+8.4f, alt = %+8.4f\n", nullNLL, altNLL)))
     double ret = nullNLL-altNLL;
-
+    if (save_tree_ || save_data_) {
+      if (nullNLL == 0. || altNLL == 0.) ret = -999.;
+      t_fit_nul_ = nullNLL == 0. ? false : true;
+      t_fit_alt_ = altNLL  == 0. ? false : true;
+      t_deltaNLL_ = ret;
+      if (save_tree_) t_out_->Fill();
+    }
     *paramsAlt_  = initialStateAlt;
     *paramsNull_ = initialStateNull;
 
+    if (save_data_ && t_deltaNLL_ > save_data_min_ && t_deltaNLL_ < save_data_max_) {
+      // Split the dataset into the separate categories
+      std::unique_ptr<TList> split(data.split(RooCategory("CMS_channel", "")));
+      for (int i = 0; i < split->GetSize(); ++i) {
+        RooAbsData *idat = dynamic_cast<RooAbsData*>(split->At(i));
+        RooRealVar & x = ((RooRealVar&)((*idat->get())["CMS_th1x"]));
+        RooAbsBinning const& bins = x.getBinning();
+        TH1 *hist = idat->createHistogram(
+            TString::Format("%s_toy_%i", idat->GetName(), t_index_), x,
+            RooFit::Binning(bins));
+        hist->SetName(TString::Format("%s_toy_%i", idat->GetName(), t_index_));
+        f_out_->cd();
+        hist->Write();
+        delete hist;
+      }
+    }
+    ++t_index_;
     return ret;
 }
 
@@ -116,12 +177,13 @@ double ProfiledLikelihoodRatioTestStatOpt::minNLL(std::auto_ptr<RooAbsReal> &nll
 #endif
     CascadeMinimizer minim(*nll_, CascadeMinimizer::Constrained);
     minim.setStrategy(0);
-    minim.minimize(verbosity_-2);
+    bool ok = minim.minimize(verbosity_-2);
     if (verbosity_ > 1) {
         std::auto_ptr<RooFitResult> res(minim.save());
         res->Print("V");
     }
-    return nll_->getVal();
+    return ok ? nll_->getVal() : 0.;
+    // return nll_->getVal();
 }
 
 //============================================================================================================================================
@@ -341,7 +403,7 @@ std::vector<Double_t> ProfiledLikelihoodTestStatOpt::Evaluate(RooAbsData& data, 
         r->setVal(initialR); 
         r->setConstant(true);
         double thisNLL = nullNLL, sign = +1.0;
-    	int nfloatingpars = utils::countFloating(*(nll_->getParameters( (const RooArgSet*) 0)));
+      int nfloatingpars = utils::countFloating(*(nll_->getParameters( (const RooArgSet*) 0)));
         if (initialR == 0 || oneSided_ != oneSidedDef || bestFitR < initialR) { 
             // must do constrained fit (if there's something to fit besides XS)
             //std::cout << "PERFORMING CONSTRAINED FIT " << r->GetName() << " == " << r->getVal() << std::endl;

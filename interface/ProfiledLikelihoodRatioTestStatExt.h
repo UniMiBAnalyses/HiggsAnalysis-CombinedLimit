@@ -31,6 +31,11 @@ class ProfiledLikelihoodRatioTestStatOpt : public RooStats::TestStatistic {
         // Verbosity (default: 0)
         void setPrintLevel(Int_t level) { verbosity_ = level; }
 
+        void SetupOutput(bool save_tree, bool save_data, double data_min_q,
+                         double data_max_q);
+
+        virtual ~ProfiledLikelihoodRatioTestStatOpt();
+
     private:
         RooAbsPdf *pdfNull_, *pdfAlt_;
         RooArgSet snapNull_, snapAlt_; 
@@ -38,6 +43,17 @@ class ProfiledLikelihoodRatioTestStatOpt : public RooStats::TestStatistic {
         std::auto_ptr<RooArgSet> paramsNull_, paramsAlt_;
         std::auto_ptr<RooAbsReal> nllNull_, nllAlt_;
         Int_t verbosity_;
+        TFile *f_out_;
+        TTree *t_out_;
+        double save_data_min_;
+        double save_data_max_;
+        bool save_data_;
+        bool save_tree_;
+        double t_deltaNLL_;
+        bool t_fit_nul_;
+        bool t_fit_alt_;
+        int t_index_;
+
 
         // create NLL. if returns true, it can be kept, if false it should be deleted at the end of Evaluate
         bool createNLL(RooAbsPdf &pdf, RooAbsData &data, std::auto_ptr<RooAbsReal> &nll) ;
