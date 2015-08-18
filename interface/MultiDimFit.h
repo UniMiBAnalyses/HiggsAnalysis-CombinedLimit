@@ -45,6 +45,7 @@ protected:
   static bool hasMaxDeltaNLLForProf_;
   static bool loadedSnapshot_;
   static float maxDeltaNLLForProf_;
+  static std::string fixedPointPOIs_;
 
   static std::string saveSpecifiedFuncs_;
   static std::string saveSpecifiedNuis_;
