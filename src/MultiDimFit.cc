@@ -449,6 +449,7 @@ void MultiDimFit::doGrid(RooWorkspace *w, RooAbsReal &nll)
 		for(unsigned int j=0; j<specifiedCatNames_.size(); j++){
 			specifiedCatVals_[j]=specifiedCat_[j]->getIndex();
 		}
+                std::cout << ">> deltaNLL = " << deltaNLL_ << "\n";
                 Combine::commitPoint(true, /*quantile=*/prob);
             }
         }

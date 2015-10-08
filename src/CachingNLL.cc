@@ -636,6 +636,7 @@ cacheutils::CachingAddNLL::evaluate() const
     // then get the final nll
     static bool gentleNegativePenalty_ = runtimedef::get("GENTLE_LEE");
     double ret = constantZeroPoint_;
+    static int uWarnings = 0;
     for (its = bgs; its != eds ; ++its) {
         if (!isnormal(*its) || *its <= 0) {
             if ((weights_[its-bgs] == 0) && (*its == 0)) {
@@ -660,25 +661,39 @@ cacheutils::CachingAddNLL::evaluate() const
                 ret -= 25;  // add a penalty (negative since we flip 'ret' afterwards)
                 continue;
             }
-            std::cout << "WARNING: underflow to " << *its << " in " << pdf_->GetName() << " for bin " << its-bgs << ", weight " << weights_[its-bgs] << std::endl; 
+            if (uWarnings < 100) std::cout << "WARNING: underflow to " << *its << " in " << pdf_->GetName() << " for bin " << its-bgs << ", weight " << weights_[its-bgs] << std::endl;
+            ++uWarnings;
             if (!CachingSimNLL::noDeepLEE_) logEvalError("Number of events is negative or error"); else CachingSimNLL::hasError_ = true;
             if (fastExit_) { std::cout << "FASTEXIT from " << pdf_->GetName() << std::endl; return 9e9; }
-            else *its = 1;
+            // We are going to increase to 1E-6, but we should also correct the exected events
+            if (*its <= 0.) {
+              //double correction = std::fabs(*its) + 1E-6;
+              //if (uWarnings < 100) std::cout << "sumCoeff was " << sumCoeff << ", it is now " << (sumCoeff + correction) << "\n";
+              //sumCoeff += correction;
+              *its = 1.;
+            }
         }
     }
     // Do the reduction 
     //      for ( its = bgs, itw = bgw ; its != eds ; ++its, ++itw ) {
     //         ret -= (*itw) * log( ((*its) / sumCoeff) );
     //      }
+    if (sumCoeff <= 0) {
+        if (uWarnings < 100) std::cout << "WARNING: underflow in sumCoeff for " << pdf_->GetName() << ", sumCoeff = " << sumCoeff << " (observed: " << sumWeights_ << ")" << std::endl;
+        ++uWarnings;
+        if (!CachingSimNLL::noDeepLEE_) logEvalError("Expected number of events is negative"); else CachingSimNLL::hasError_ = true;
+        sumCoeff = 1.;
+    }
     ret -= vectorized::nll_reduce(partialSum_.size(), &partialSum_[0], &weights_[0], sumCoeff, &workingArea_[0]);
     // std::cout << "AddNLL for " << pdf_->GetName() << ": " << ret << std::endl;
     // and add extended term: expected - observed*log(expected);
     static bool expEventsNoNorm = runtimedef::get("ADDNLL_ROOREALSUM_NONORM");
     double expectedEvents = (isRooRealSum_ && !expEventsNoNorm ? pdf_->getNorm(data_->get()) : sumCoeff);
     if (expectedEvents <= 0) {
-        std::cout << "WARNING: underflow in total event yield for " << pdf_->GetName() << ", expected yield = " << expectedEvents << " (observed: " << sumWeights_ << ")" << std::endl;
+        if (uWarnings < 100) std::cout << "WARNING: underflow in total event yield for " << pdf_->GetName() << ", expected yield = " << expectedEvents << " (observed: " << sumWeights_ << ")" << std::endl;
+        ++uWarnings;
         if (!CachingSimNLL::noDeepLEE_) logEvalError("Expected number of events is negative"); else CachingSimNLL::hasError_ = true;
-        expectedEvents = 1e-6;
+        expectedEvents = 1.;
     }
     // I can add any arbitrary constant that does not depend on the expected events,
     // so I choose it in order to minimize the number assuming that expectedEvents ~ sumWeights_
