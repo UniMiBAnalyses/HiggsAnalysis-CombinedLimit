@@ -47,16 +47,23 @@ protected:
   static bool squareDistPoiStep_;
   static bool fastScan_;
   static bool hasMaxDeltaNLLForProf_;
-  static bool loadedSnapshot_;
+  static bool loadedSnapshot_, forceFirstFit_, savingSnapshot_;
   static float maxDeltaNLLForProf_;
   static float autoRange_;
+  static bool  startFromPreFit_;
+  static std::string fixedPointPOIs_;
 
   static std::string saveSpecifiedFuncs_;
   static std::string saveSpecifiedNuis_;
+  static std::string saveSpecifiedIndex_;
   static std::vector<std::string>  specifiedFuncNames_;
   static std::vector<RooAbsReal*> specifiedFunc_;
   static std::vector<float>        specifiedFuncVals_;
   static RooArgList                specifiedFuncList_;
+  static std::vector<std::string>  specifiedCatNames_;
+  static std::vector<RooCategory*> specifiedCat_;
+  static std::vector<int>        specifiedCatVals_;
+  static RooArgList                specifiedCatList_;
   static std::vector<std::string>  specifiedNuis_;
   static std::vector<RooRealVar *> specifiedVars_;
   static std::vector<float>        specifiedVals_;
@@ -67,11 +74,11 @@ protected:
 
   // variables
   void doSingles(RooFitResult &res) ;
-  void doGrid(RooAbsReal &nll) ;
-  void doRandomPoints(RooAbsReal &nll) ;
-  void doFixedPoint(RooWorkspace *w,RooAbsReal &nll) ;
-  void doContour2D(RooAbsReal &nll) ;
-  void doStitch2D(RooAbsReal &nll) ;
+  void doGrid(RooWorkspace *w, RooAbsReal &nll) ;
+  void doRandomPoints(RooWorkspace *w, RooAbsReal &nll) ;
+  void doFixedPoint(RooWorkspace *w, RooAbsReal &nll) ;
+  void doContour2D(RooWorkspace *w, RooAbsReal &nll) ;
+  void doStitch2D(RooWorkspace *w, RooAbsReal &nll) ;
 
   virtual void doCommitPoint();
 
