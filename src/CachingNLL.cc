@@ -728,7 +728,7 @@ cacheutils::CachingAddNLL::setData(const RooAbsData &data)
     for (int i = 0, n = data.numEntries(); i < n; ++i) {
         data.get(i);
         double w = data.weight();
-        if (w || includeZeroWeights_) weights_.push_back(w); 
+        if (w >= 1E-8 || includeZeroWeights_) weights_.push_back(w); 
     }
     sumWeights_ = sumDefault(weights_);
     partialSum_.resize(weights_.size());
@@ -1038,10 +1038,10 @@ void cacheutils::CachingSimNLL::splitWithWeights(const RooAbsData &data, const R
     }
     //utils::printRDH((RooAbsData*)&data);
     for (int i = 0; i < ne; ++i) {
-        data.get(i); if (data.weight() == 0 && !includeZeroWeightsAny) continue;
+        data.get(i); if (data.weight() < 1E-8 && !includeZeroWeightsAny) continue;
         int ib = cat->getBin();
         //std::cout << "Event " << i << " of weight " << data.weight() << " is in bin " << ib << " label " << cat->getLabel() << std::endl;
-        if (data.weight() > 0 || includeZeroWeights[ib]) datasets_[ib]->add(obs, data.weight());
+        if (data.weight() >= 1E-8 || includeZeroWeights[ib]) datasets_[ib]->add(obs, data.weight());
     }
 }
 
