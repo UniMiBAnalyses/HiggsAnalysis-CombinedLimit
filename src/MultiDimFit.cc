@@ -112,6 +112,8 @@ void MultiDimFit::applyOptions(const boost::program_options::variables_map &vm)
         if (algo == "grid3x3") gridType_ = G3x3;
     } else if (algo == "fixed") {
         algo_ = FixedPoint;
+    } else if (algo == "fit") {
+        algo_ = Fit;
     } else if (algo == "random") {
         algo_ = RandomPoints;
     } else if (algo == "contour2d") {
@@ -216,6 +218,7 @@ bool MultiDimFit::runSpecific(RooWorkspace *w, RooStats::ModelConfig *mc_s, RooS
         case Grid: doGrid(w,*nll); break;
         case RandomPoints: doRandomPoints(w,*nll); break;
         case FixedPoint: doFixedPoint(w,*nll); break;
+        case Fit: doSimpleFit(w,*nll); break;
         case Contour2D: doContour2D(w,*nll); break;
         case Stitch2D: doStitch2D(w,*nll); break;
     }
@@ -746,6 +749,43 @@ void MultiDimFit::doFixedPoint(RooWorkspace *w, RooAbsReal &nll)
 	    }
     } 
 }
+
+void MultiDimFit::doSimpleFit(RooWorkspace *w, RooAbsReal &nll) 
+{
+    double nll0 = nll.getVal();
+    if (setPhysicsModelParameterExpression_ != "") {
+        RooArgSet allParams(w->allVars());
+        utils::setModelParameters( setPhysicsModelParameterExpression_, allParams);
+    }
+    if (startFromPreFit_) w->loadSnapshot("clean");
+
+    CascadeMinimizer minim(nll, CascadeMinimizer::Constrained);
+    minim.setStrategy(minimizerStrategy_);
+    // now we minimize
+    {   
+	    CloseCoutSentry sentry(verbose < 3);    
+	    bool ok = minim.minimize(verbose-1);
+	    if (ok) {
+		    nll0Value_ = nll0;
+		    nllValue_ = nll.getVal();
+		    deltaNLL_ = nll.getVal() - nll0;
+		    for(unsigned int j=0; j<specifiedNuis_.size(); j++){
+			    specifiedVals_[j]=specifiedVars_[j]->getVal();
+		    }
+		    for(unsigned int j=0; j<specifiedFuncNames_.size(); j++){
+			    specifiedFuncVals_[j]=specifiedFunc_[j]->getVal();
+		    }
+		    for(unsigned int j=0; j<specifiedCatNames_.size(); j++){
+			    specifiedCatVals_[j]=specifiedCat_[j]->getIndex();
+		    }
+		    Combine::commitPoint(true, /*quantile=*/0);
+    //for (unsigned int i = 0; i < n; ++i) {
+    //        std::cout<<" after the fit "<<poiVars_[i]->GetName()<<"= "<<poiVars_[i]->getVal()<<std::endl;
+    //}
+	    }
+    } 
+}
+
 
 void MultiDimFit::doContour2D(RooWorkspace *, RooAbsReal &nll) 
 {
