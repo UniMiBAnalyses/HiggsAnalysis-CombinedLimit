@@ -114,6 +114,16 @@ bool GoodnessOfFit::runSaturatedModel(RooWorkspace *w, RooStats::ModelConfig *mc
                                              ROOT::Math::MinimizerOptions::DefaultMinimizerAlgo().c_str());
   std::auto_ptr<RooFitResult> result_nominal(pdf_nominal->fitTo(data, RooFit::Save(1), minim, RooFit::Strategy(minimizerStrategy_), RooFit::Hesse(0), RooFit::Constrain(*mc_s->GetNuisanceParameters())));
   std::auto_ptr<RooFitResult> result_saturated(saturated->fitTo(data, RooFit::Save(1), minim, RooFit::Strategy(minimizerStrategy_), RooFit::Hesse(0), RooFit::Constrain(*mc_s->GetNuisanceParameters())));
+  
+  std::auto_ptr<RooAbsReal> nominal_nll(pdf_nominal->createNLL(data, RooFit::Constrain(*mc_s->GetNuisanceParameters())));
+  std::auto_ptr<RooAbsReal> saturated_nll(saturated->createNLL(data, RooFit::Constrain(*mc_s->GetNuisanceParameters())));
+
+  double nll_nominal_init = nominal_nll->getVal();
+  double nll_saturated_init = saturated_nll->getVal();
+
+  std::cout << "NLL nominal initial: " << nll_nominal_init << "\n";
+  std::cout << "NLL saturated initial: " << nll_saturated_init << "\n";
+
   sentry.clear();
 
   saturated.reset();
@@ -125,6 +135,9 @@ bool GoodnessOfFit::runSaturatedModel(RooWorkspace *w, RooStats::ModelConfig *mc
 
   double nll_nominal   = result_nominal->minNll();
   double nll_saturated = result_saturated->minNll();
+  std::cout << "NLL nominal: " << nll_nominal << "\n";
+  std::cout << "NLL saturated: " << nll_saturated << "\n";
+
   if (fabs(nll_nominal) > 1e10 || fabs(nll_saturated) > 1e10) return false;
   limit = 2*(nll_nominal-nll_saturated);
 
