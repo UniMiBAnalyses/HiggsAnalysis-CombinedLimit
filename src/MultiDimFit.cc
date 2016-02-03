@@ -136,15 +136,18 @@ bool MultiDimFit::runSpecific(RooWorkspace *w, RooStats::ModelConfig *mc_s, RooS
         for (int i = 0, n = poi_.size(); i < n; ++i) {
             poiVals_[i] = poiVars_[i]->getVal();
         }
-        if (algo_ != None) {
-		for(unsigned int j=0; j<specifiedNuis_.size(); j++){
-			specifiedVals_[j]=specifiedVars_[j]->getVal();
-		}
-		for(unsigned int j=0; j<specifiedFuncNames_.size(); j++){
-			specifiedFuncVals_[j]=specifiedFunc_[j]->getVal();
-		}
-		if (!altCommit_) Combine::commitPoint(/*expected=*/false, /*quantile=*/1.); // otherwise we get it multiple times
+        //if (algo_ != None) {
+	for(unsigned int j=0; j<specifiedNuis_.size(); j++){
+		specifiedVals_[j]=specifiedVars_[j]->getVal();
 	}
+	for(unsigned int j=0; j<specifiedFuncNames_.size(); j++){
+		specifiedFuncVals_[j]=specifiedFunc_[j]->getVal();
+	}
+	for(unsigned int j=0; j<specifiedCatNames_.size(); j++){
+		specifiedCatVals_[j]=specifiedCat_[j]->getIndex();
+	}
+  if (!altCommit_) Combine::commitPoint(/*expected=*/false, /*quantile=*/1.); // otherwise we get it multiple times
+	//}
     }
    
 
@@ -204,9 +207,17 @@ void MultiDimFit::initOnce(RooWorkspace *w, RooStats::ModelConfig *mc_s) {
     }
     for (std::vector<std::string>::const_iterator it = poi_.begin(), ed = poi_.end(); it != ed; ++it) {
         RooAbsArg *a = mcPoi.find(it->c_str());
+	bool isPoi=true;
+        if (a == 0) { 
+		a = w->arg(it->c_str());  // look for the parameter elsewhere, but remember to clear its optimizeBounds attribute 
+		isPoi = false;
+	}
         if (a == 0) throw std::invalid_argument(std::string("Parameter of interest ")+*it+" not in model.");
         RooRealVar *rrv = dynamic_cast<RooRealVar *>(a);
         if (rrv == 0) throw std::invalid_argument(std::string("Parameter of interest ")+*it+" not a RooRealVar.");
+	if (!isPoi) {
+		if (rrv->getAttribute("optimizeBounds") ) rrv->setAttribute("optimizeBounds",false);
+	}
         poiVars_.push_back(rrv);
         poiVals_.push_back(rrv->getVal());
         poiList_.add(*rrv);
