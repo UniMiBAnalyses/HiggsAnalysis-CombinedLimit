@@ -85,6 +85,7 @@ class ModelBuilder(ModelBuilderBase):
         self.physics.preProcessNuisances(self.DC.systs)
         self.doNuisances()
 	self.doRateParams()
+        self.doGroups()
         self.doExpectedEvents()
         self.doIndividualModels()
         self.doCombination()
@@ -132,6 +133,10 @@ class ModelBuilder(ModelBuilderBase):
         # Prepare a dictionary of which group a certain nuisance belongs to
         groupsFor = {}
         existingNuisanceNames = tuple(syst[0] for syst in self.DC.systs)
+        # Add floating rateParam terms. Have to unpack self.DC.rateParams carefully, structure is
+        # {"key" : [[["name",...], [...]],...], ...}. Require the size of the inner list to be == 3, which
+        # is the case only for floating rateParams.
+        existingNuisanceNames += tuple(set(x[0][0] for y in self.DC.rateParams.values() for x in y if len(x[0]) == 3))
         for groupName,nuisanceNames in self.DC.groups.iteritems():
             for nuisanceName in nuisanceNames:
                 if nuisanceName not in existingNuisanceNames:
@@ -153,6 +158,11 @@ class ModelBuilder(ModelBuilderBase):
                         sig = float(pf); sigscale = sig * (4 if pdf == "shape" else 7)
                         r = "-%g,%g" % (sigscale,sigscale)
 		r_exp = "" if self.out.var(n) else "[%s]"%r # Specify range to invoke factory to produce a RooRealVar only if it doesn't already exist
+                if pdf == "shapeU":
+                    self.doObj("%s_Pdf" % n, "Uniform", "%s[%f,%f]" % (n,-4,4))
+                    self.out.var(n).setVal(0)
+                    self.out.var(n).setError(1) 
+                    continue
                 if self.options.noOptimizePdf:
                       self.doObj("%s_Pdf" % n, "Gaussian", "%s%s, %s_In[0,%s], %g" % (n,r_exp,n,r,sig),True); # Use existing constraint since it could be a param
                 else:
@@ -309,6 +319,7 @@ class ModelBuilder(ModelBuilderBase):
             self.doObj("nuisancePdf", "PROD", ",".join(["%s_Pdf" % n for (n,nf,p,a,e) in self.DC.systs]))
             self.doSet("globalObservables", ",".join(globalobs))
 	
+    def doGroups(self):
         for groupName,nuisanceNames in self.DC.groups.iteritems():
 	    nuisanceargset = ROOT.RooArgSet()
             for nuisanceName in nuisanceNames:
