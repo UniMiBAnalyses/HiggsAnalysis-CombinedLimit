@@ -73,6 +73,8 @@ protected:
   void doContour2D(RooAbsReal &nll) ;
   void doStitch2D(RooAbsReal &nll) ;
 
+  virtual void doCommitPoint();
+
   // utilities
   /// for each RooRealVar, set a range 'box' from the PL profiling all other parameters
   void doBox(RooAbsReal &nll, double cl, const char *name="box", bool commitPoints=true) ;

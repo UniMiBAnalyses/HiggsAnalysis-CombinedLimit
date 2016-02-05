@@ -45,6 +45,8 @@ protected:
   static bool  saveNLL_, keepFailures_, protectUnbinnedChannels_;
   static double nllValue_, nll0Value_;
   std::auto_ptr<RooAbsReal> nll;
+
+  static bool altCommit_;
   // method that is implemented in the subclass
   virtual bool runSpecific(RooWorkspace *w, RooStats::ModelConfig *mc_s, RooStats::ModelConfig *mc_b, RooAbsData &data, double &limit, double &limitErr, const double *hint) = 0;
 
@@ -59,6 +61,8 @@ protected:
 
   void optimizeBounds(const RooWorkspace *w, const RooStats::ModelConfig *mc) ;
   void restoreBounds(const RooWorkspace *w, const RooStats::ModelConfig *mc) ;
+  
+  virtual void doCommitPoint() {}
 };
 
 
