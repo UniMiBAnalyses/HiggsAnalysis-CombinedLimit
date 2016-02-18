@@ -421,6 +421,17 @@ void Combine::run(TString hlfFile, const std::string &dataset, double &limit, do
       if (mc_bonly) mc_bonly->SetNuisanceParameters(newNuis);
       nuisances = mc->GetNuisanceParameters();
     }
+    
+    //env_pdf_
+    RooArgSet allvars = w->allVars();
+    TIterator *var = allvars.createIterator();
+    startswith = "env_pdf_";
+    while (RooRealVar *arg = (RooRealVar*)var->Next()) {
+      if (!(std::string(arg->GetName()).compare(0, startswith.size(), startswith))) {
+        w->var(arg->GetName())->setConstant(false);
+        std::cout << "Floating parameter: " << arg->GetName() << "\n";
+      }
+    }
   }
 
   if (dataset.find(":") != std::string::npos) {
