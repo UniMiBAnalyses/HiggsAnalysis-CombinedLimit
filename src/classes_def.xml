@@ -117,6 +117,8 @@
 	<class name="VerticalInterpPdf" />
 	<class name="GaussExp" />
 	<class name="RooParametricHist" />
+	<class name="analysis::backgroundmodel::RooDoubleGausExp" />
+	<class name="analysis::backgroundmodel::RooExtendNovosibirsk" />
 	<class name="RooMorphingPdf" />
         <function name="function th1fmorph" />
 
