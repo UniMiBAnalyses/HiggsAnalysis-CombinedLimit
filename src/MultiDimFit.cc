@@ -306,11 +306,13 @@ void MultiDimFit::initOnce(RooWorkspace *w, RooStats::ModelConfig *mc_s) {
     }
 
     if(saveSpecifiedNuis_!="" && withSystematics){
-	    RooArgSet mcNuis(*mc_s->GetNuisanceParameters());
+	    RooArgSet mcNuis(*mc_s->GetPdf()->getParameters(w->data("data_obs")));
 	    if(saveSpecifiedNuis_=="all"){
 		    specifiedNuis_.clear();
-		    RooLinkedListIter iterN = mc_s->GetNuisanceParameters()->iterator();
+		    RooLinkedListIter iterN = mcNuis.iterator();
 		    for (RooAbsArg *a = (RooAbsArg*) iterN.Next(); a != 0; a = (RooAbsArg*) iterN.Next()) {
+                RooRealVar *rrv = dynamic_cast<RooRealVar *>(a);
+                if (rrv && (rrv->isConstant() || poiList_.contains(*a))) continue;
 			    specifiedNuis_.push_back(a->GetName());
 		    }
 	    }else{
