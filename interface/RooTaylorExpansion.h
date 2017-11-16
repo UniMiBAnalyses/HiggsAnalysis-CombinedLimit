@@ -28,9 +28,10 @@ class RooRealVar;
 class RooTaylorExpansion : public RooAbsReal {
  public:
   RooTaylorExpansion(){};
-  RooTaylorExpansion(const char* name, const char* title,
-                     const RooArgList& x, const RooArgList& x0, unsigned int order,
-                     const TVectorD& terms);
+  RooTaylorExpansion(const char* name, const char* title, const RooArgList& x,
+                     const RooArgList& x0,
+                     std::vector<std::vector<int>> const& trackers,
+                     const std::vector<double>& terms);
 
   RooTaylorExpansion(const RooTaylorExpansion& other, const char* name = 0);
   virtual TObject* clone(const char* newname) const {
@@ -38,29 +39,15 @@ class RooTaylorExpansion : public RooAbsReal {
   }
   inline virtual ~RooTaylorExpansion() {}
 
-  // Int_t getAnalyticalIntegral(RooArgSet& allVars, RooArgSet& analVars, const
-  // char* rangeName=0) const ; Double_t analyticalIntegral(Int_t code, const
-  // char* rangeName=0) const ;
-
-  // Int_t getGenerator(const RooArgSet& directVars, RooArgSet &generateVars,
-  // Bool_t staticInitOK=kTRUE) const; void initGenerator(Int_t code) ; void
-  // generateEvent(Int_t code);
-
+  void printMultiline(std::ostream& os, Int_t contents,
+                                   Bool_t verbose, TString indent) const;
 
  protected:
-  // void decodeCode(Int_t code, std::vector<int>& map1, std::vector<int>& map2)
-  // const; AnaIntData& anaIntData(Int_t code) const ; GenData& genData(Int_t
-  // code) const ;
-
-  // mutable std::map<int, AnaIntData> _anaIntCache;  //!
-  // mutable std::map<int, GenData> _genCache;        //!
-
-  // mutable std::vector<BitBlock> _aicMap;  //!
 
   RooListProxy _x;
   RooListProxy _x0;
-  unsigned int _order;
-  TVectorD _terms;
+  std::vector<std::vector<int>> _trackers;
+  std::vector<double> _terms;
 
   Double_t evaluate() const;
 
