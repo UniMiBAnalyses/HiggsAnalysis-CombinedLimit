@@ -840,6 +840,10 @@ void MultiDimFit::doFixedPoint(RooWorkspace *w, RooAbsReal &nll)
         poiVars_[i]->setConstant(true);
     }
 
+    std::auto_ptr<RooArgSet> params(nll.getParameters((const RooArgSet *)0));
+    RooArgSet snap;
+    params->snapshot(snap);
+
     CascadeMinimizer minim(nll, CascadeMinimizer::Constrained);
     if (!autoBoundsPOIs_.empty()) minim.setAutoBounds(&autoBoundsPOISet_); 
     if (!autoMaxPOIs_.empty()) minim.setAutoMax(&autoMaxPOISet_); 
@@ -849,43 +853,70 @@ void MultiDimFit::doFixedPoint(RooWorkspace *w, RooAbsReal &nll)
     //for (unsigned int i = 0; i < n; ++i) {
     //        std::cout<<" Before setting fixed point "<<poiVars_[i]->GetName()<<"= "<<poiVals_[i]<<std::endl;
     //}
-    if (fixedPointPOIs_ != "") {
-	    utils::setModelParameters( fixedPointPOIs_, w->allVars());
-    } else if (setPhysicsModelParameterExpression_ != "") {
-            std::cout << " --fixedPointPOIs option not used, so will use the argument of --setPhysicsModelParameters instead" << std::endl;
-	    utils::setModelParameters( setPhysicsModelParameterExpression_, w->allVars());
-    }   
-
-    for (unsigned int i = 0; i < n; ++i) {
-	    poiVars_[i] -> setConstant(true);
-	    poiVals_[i] = poiVars_[i]->getVal(); 
-            std::cout<<" Evaluating fixed point with "<<poiVars_[i]->GetName()<<"= "<<poiVals_[i]<<std::endl;
+    std::vector<std::string> parameterSets;
+    if (fixedPointPOIs_.find(':') != fixedPointPOIs_.npos) {
+        std::vector<std::string> splitPars;
+        boost::split(splitPars, fixedPointPOIs_, boost::is_any_of(":"));
+        std::vector<std::vector<std::string>> splitAll(splitPars.size());
+        unsigned nSets = 9999999;
+        for (unsigned i = 0; i < splitPars.size(); ++i) {
+            std::vector<std::string> parts;
+            boost::split(splitAll[i], splitPars[i], boost::is_any_of("=,"));
+            if ((splitAll[i].size() - 1) < nSets) nSets = (splitAll[i].size() - 1);
+        }
+        for (unsigned i = 0; i < nSets; ++i) {
+            std::string expr;
+            for (unsigned j = 0; j < splitPars.size(); ++j) {
+                expr += (splitAll[j][0] + "=" + splitAll[j][i+1]);
+                if (j < (splitPars.size() - 1)) expr += ",";
+            }
+            parameterSets.push_back(expr);
+            std::cout << expr << "\n";
+        }
+    } else {
+        parameterSets.push_back(fixedPointPOIs_);
     }
-    // now we minimize
-    {   
-	    CloseCoutSentry sentry(verbose < 3);    
-	    bool ok = minim.minimize(verbose-1);
-	    if (ok) {
-		    nll0Value_ = nll0;
-		    nllValue_ = nll.getVal();
-		    deltaNLL_ = nll.getVal() - nll0;
-		    double qN = 2*(nll.getVal() - nll0);
-		    double prob = ROOT::Math::chisquared_cdf_c(qN, n+nOtherFloatingPoi_);
-		    for(unsigned int j=0; j<specifiedNuis_.size(); j++){
-			    specifiedVals_[j]=specifiedVars_[j]->getVal();
-		    }
-		    for(unsigned int j=0; j<specifiedFuncNames_.size(); j++){
-			    specifiedFuncVals_[j]=specifiedFunc_[j]->getVal();
-		    }
-		    for(unsigned int j=0; j<specifiedCatNames_.size(); j++){
-			    specifiedCatVals_[j]=specifiedCat_[j]->getIndex();
-		    }
-		    Combine::commitPoint(true, /*quantile=*/prob);
-    //for (unsigned int i = 0; i < n; ++i) {
-    //        std::cout<<" after the fit "<<poiVars_[i]->GetName()<<"= "<<poiVars_[i]->getVal()<<std::endl;
-    //}
-	    }
-    } 
+    for (auto const& expr : parameterSets) {
+        *params = snap;
+        fixedPointPOIs_ = expr;
+        if (fixedPointPOIs_ != "") {
+    	    utils::setModelParameters( fixedPointPOIs_, w->allVars());
+        } else if (setPhysicsModelParameterExpression_ != "") {
+                std::cout << " --fixedPointPOIs option not used, so will use the argument of --setPhysicsModelParameters instead" << std::endl;
+    	    utils::setModelParameters( setPhysicsModelParameterExpression_, w->allVars());
+        }
+
+        for (unsigned int i = 0; i < n; ++i) {
+    	    poiVars_[i] -> setConstant(true);
+    	    poiVals_[i] = poiVars_[i]->getVal();
+                std::cout<<" Evaluating fixed point with "<<poiVars_[i]->GetName()<<"= "<<poiVals_[i]<<std::endl;
+        }
+        // now we minimize
+        {
+    	    CloseCoutSentry sentry(verbose < 3);
+    	    bool ok = minim.minimize(verbose-1);
+    	    if (ok) {
+    		    nll0Value_ = nll0;
+    		    nllValue_ = nll.getVal();
+    		    deltaNLL_ = nll.getVal() - nll0;
+    		    double qN = 2*(nll.getVal() - nll0);
+    		    double prob = ROOT::Math::chisquared_cdf_c(qN, n+nOtherFloatingPoi_);
+    		    for(unsigned int j=0; j<specifiedNuis_.size(); j++){
+    			    specifiedVals_[j]=specifiedVars_[j]->getVal();
+    		    }
+    		    for(unsigned int j=0; j<specifiedFuncNames_.size(); j++){
+    			    specifiedFuncVals_[j]=specifiedFunc_[j]->getVal();
+    		    }
+    		    for(unsigned int j=0; j<specifiedCatNames_.size(); j++){
+    			    specifiedCatVals_[j]=specifiedCat_[j]->getIndex();
+    		    }
+    		    Combine::commitPoint(true, /*quantile=*/prob);
+        //for (unsigned int i = 0; i < n; ++i) {
+        //        std::cout<<" after the fit "<<poiVars_[i]->GetName()<<"= "<<poiVars_[i]->getVal()<<std::endl;
+        //}
+    	    }
+        }
+    }
 }
 
 void MultiDimFit::doContour2D(RooWorkspace *, RooAbsReal &nll) 
