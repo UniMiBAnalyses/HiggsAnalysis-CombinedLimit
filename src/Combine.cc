@@ -202,6 +202,7 @@ bool Combine::mklimit(RooWorkspace *w, RooStats::ModelConfig *mc_s, RooStats::Mo
         } else {
             hashint = hintAlgo->run(w, mc_s, mc_b, data, hint, hintErr, 0);
         } 
+	w->loadSnapshot("clean");
     }
     limitErr = 0; // start with 0, as some algorithms don't compute it
     ret = algo->run(w, mc_s, mc_b, data, limit, limitErr, (hashint ? &hint : 0));    
@@ -878,7 +879,7 @@ void Combine::run(TString hlfFile, const std::string &dataset, double &limit, do
                 minim.setStrategy(1);
                 minim.minimize();
                 utils::setAllConstant(*mc->GetParametersOfInterest(), false); 
-                w->saveSnapshot("frequentistPreFit", w->allVars());
+                w->saveSnapshot("clean", w->allVars());
           }
           if (nuisancePdf.get()) systDs = nuisancePdf->generate(*mc->GetGlobalObservables(), nToys);
       } else {
@@ -905,6 +906,10 @@ void Combine::run(TString hlfFile, const std::string &dataset, double &limit, do
           if (expectSignal_) ((RooRealVar*)POI->find("r"))->setVal(expectSignal_);
         }
 	std::cout << "Generate toy " << iToy << "/" << nToys << std::endl;
+	if (verbose>2){
+	  std::cout << "... from parameter values:"<< std::endl;
+	  w->allVars().Print("v");
+	}
 	if (isExtended) {
           if (newGen_) {
             absdata_toy = newToyMC.generate(weightVar_); // as simple as that
