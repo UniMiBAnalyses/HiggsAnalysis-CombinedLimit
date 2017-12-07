@@ -349,7 +349,7 @@ RooArgList * CMSHistErrorPropagator::setupBinPars(double poissonThreshold) {
         "%-10i %-15f %-15f %-30s\n", j, n, std::sqrt(n),
         TString::Format("Unweighted events, alpha=%f", alpha).Data());
 
-    if (n <= poissonThreshold) {
+    if (true) {
       std::cout << TString::Format("  %-30s\n", "=> Number of weighted events is below poisson threshold");
 
       bintypes_[j].resize(vfuncs_.size(), 4);
@@ -374,13 +374,14 @@ RooArgList * CMSHistErrorPropagator::setupBinPars(double poissonThreshold) {
         } else if (v_p < 0. && e_p > 0.) {
           std::cout << TString::Format("      %-30s\n", "=> Cannot handle negative content, ignore");
           bintypes_[j][i] = 4;
-        } else if (v_p > 0. && e_p > 0. && v_p >= (e_p*0.999)) {
+        //} else if (v_p > 0. && e_p > 0. && v_p >= (e_p*0.999)) {
+        } else if (true) {
           double n_p_r = int(0.5 + ((v_p * v_p) / (e_p * e_p)));
           double alpha_p_r = v_p / n_p_r;
           std::cout << TString::Format(
               "    %-20s %-15f %-15f %-30s\n", "", n_p_r, std::sqrt(n_p_r),
               TString::Format("Unweighted events, alpha=%f", alpha_p_r).Data());
-          if (n_p_r <= poissonThreshold) {
+          if (false) {
             double sigma = 7.;
             double rmin = 0.5*ROOT::Math::chisquared_quantile(ROOT::Math::normal_cdf_c(sigma), n_p_r * 2.);
             double rmax = 0.5*ROOT::Math::chisquared_quantile(1. - ROOT::Math::normal_cdf_c(sigma), n_p_r * 2. + 2.);
