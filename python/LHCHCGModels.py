@@ -181,7 +181,10 @@ class SignalStrengths(LHCHCGBaseModel):
                     self.modelBuilder.out.function('scaling_%s_%s_%dTeV' % (P,D,E)).Print("")
 
     def getHiggsSignalYieldScale(self,production,decay,energy):
-        return "scaling_%s_%s_%s" % (production,decay,energy)
+        e = energy
+        if energy == '7TeV':
+            e = '8TeV'
+        return "scaling_%s_%s_%s" % (production,decay,e)
 class SignalStrengthRatios(LHCHCGBaseModel):
     "Allow for fits of ratios of signal strengths"
     def __init__(self):
