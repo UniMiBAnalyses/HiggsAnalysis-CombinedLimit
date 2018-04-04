@@ -876,6 +876,7 @@ cacheutils::CachingSimNLL::~CachingSimNLL()
 void
 cacheutils::CachingSimNLL::setup_() 
 {
+
     // Allow runtime-flag to switch off logEvalErrors
     noDeepLEE_ = runtimedef::get("SIMNLL_NO_LEE");
 
@@ -976,6 +977,12 @@ cacheutils::CachingSimNLL::setup_()
         }
     }   
 
+    if (runtimedef::get("SAVE_CHANNEL_NLL")) {
+        if (channelNLLs_.size() == 0) {
+            channelNLLs_.resize(pdfs_.size() + 1);
+        }
+    }
+
     setValueDirty();
 }
 
@@ -990,6 +997,10 @@ cacheutils::CachingSimNLL::evaluate() const
 #ifdef DEBUG_CACHE
     PerfCounter::add("CachingSimNLL::evaluate called");
 #endif
+
+    bool saveChannelNLL = runtimedef::get("SAVE_CHANNEL_NLL");
+
+
     static bool gentleNegativePenalty_ = runtimedef::get("GENTLE_LEE");
     DefaultAccumulator ret = 0;
     unsigned idx = 0;
@@ -1002,6 +1013,7 @@ cacheutils::CachingSimNLL::evaluate() const
                 continue;
             }
             double nllval = (*it)->getVal();
+            if (saveChannelNLL) channelNLLs_.at(idx) = nllval;
             // what sanity check could I put here?
             ret += nllval;
         }
@@ -1036,6 +1048,7 @@ cacheutils::CachingSimNLL::evaluate() const
             ret2 += (logpdfval + *itz);
         }
         ret -= ret2.sum();
+        if (saveChannelNLL) channelNLLs_[channelNLLs_.size() - 1] = -1. * ret2.sum();
     }
 #ifdef TRACE_NLL_EVALS
     static unsigned long _trace_ = 0; _trace_++;
@@ -1190,4 +1203,19 @@ cacheutils::CachingSimNLL::getParameters(const RooArgSet* depList, Bool_t stripD
 {
     return new RooArgSet(params_); 
 }
+
+std::vector<double> const& cacheutils::CachingSimNLL::getChannelNLLs() const {
+    return channelNLLs_;
+}
+
+std::vector<std::string> cacheutils::CachingSimNLL::getChannelNLLNames() const {
+    std::vector<std::string> res(pdfs_.size() + 1);
+    for (unsigned i = 0; i < pdfs_.size(); ++i) {
+        res[i] = pdfs_[i]->GetName();
+    }
+    res[res.size() - 1] = "constraintPdf";
+    return res;
+}
+
+
 

@@ -73,6 +73,7 @@ protected:
   static RooArgList                specifiedList_;
   static bool saveInactivePOI_;
 
+  static std::vector<double> savedChannelNLLs_;
   // initialize variables
   void initOnce(RooWorkspace *w, RooStats::ModelConfig *mc_s) ;
 

@@ -179,6 +179,9 @@ class CachingSimNLL  : public RooAbsReal {
         friend class CachingAddNLL;
         // trap this call, since we don't care about propagating it to the sub-components
         virtual void constOptimizeTestStatistic(ConstOpCode opcode, Bool_t doAlsoTrackingOpt=kTRUE) { }
+
+        std::vector<double> const& getChannelNLLs() const;
+        std::vector<std::string> getChannelNLLNames() const;
     private:
         void setup_();
         RooSimultaneous   *pdfOriginal_;
@@ -202,6 +205,7 @@ class CachingSimNLL  : public RooAbsReal {
         std::vector<double> constrainZeroPointsFast_;
         std::vector<double> constrainZeroPointsFastPoisson_;
         std::vector<RooAbsReal*> channelMasks_;
+        mutable std::vector<double> channelNLLs_;
 };
 
 }
