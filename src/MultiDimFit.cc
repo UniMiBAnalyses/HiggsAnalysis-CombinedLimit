@@ -17,6 +17,7 @@
 #include "HiggsAnalysis/CombinedLimit/interface/CascadeMinimizer.h"
 #include "HiggsAnalysis/CombinedLimit/interface/CloseCoutSentry.h"
 #include "HiggsAnalysis/CombinedLimit/interface/utils.h"
+#include "HiggsAnalysis/CombinedLimit/interface/CachingNLL.h"
 
 #include <Math/Minimizer.h>
 #include <Math/MinimizerOptions.h>
@@ -68,6 +69,7 @@ std::vector<RooRealVar *> MultiDimFit::specifiedVars_;
 std::vector<float>        MultiDimFit::specifiedVals_;
 RooArgList                MultiDimFit::specifiedList_;
 bool MultiDimFit::saveInactivePOI_= false;
+std::vector<double>        MultiDimFit::savedChannelNLLs_;
 
 MultiDimFit::MultiDimFit() :
     FitterAlgoBase("MultiDimFit specific options")
@@ -185,6 +187,15 @@ bool MultiDimFit::runSpecific(RooWorkspace *w, RooStats::ModelConfig *mc_s, RooS
         nll.reset(pdf.createNLL(data, constrainCmdArg, RooFit::Extended(pdf.canBeExtended()), RooFit::Offset(true)));
     }
 
+    cacheutils::CachingSimNLL *sim = dynamic_cast<cacheutils::CachingSimNLL *>(nll.get());
+    if (sim && sim->getChannelNLLs().size() > 0) {
+        savedChannelNLLs_ = sim->getChannelNLLs();
+        for (int i = 0, n = sim->getChannelNLLNames().size(); i < n; ++i) {
+            savedChannelNLLs_[i] = 0.;
+            Combine::addBranch(("deltaNLL_"+sim->getChannelNLLNames()[i]).c_str(), &savedChannelNLLs_[i], (sim->getChannelNLLNames()[i]+"/D").c_str());
+        }
+    }
+
     //if(w->var("r")) {w->var("r")->Print();}
     if ( loadedSnapshot_ || res.get() || keepFailures_) {
         for (int i = 0, n = poi_.size(); i < n; ++i) {
@@ -236,6 +247,9 @@ bool MultiDimFit::runSpecific(RooWorkspace *w, RooStats::ModelConfig *mc_s, RooS
             poiVars_[i]->setRange(min1, max1);
         }
     }
+
+
+
 
     switch(algo_) {
         case None: 
@@ -520,6 +534,12 @@ void MultiDimFit::doGrid(RooWorkspace *w, RooAbsReal &nll)
     //if (poi_.size() > 2) throw std::logic_error("Don't know how to do a grid with more than 2 POIs.");
     double nll0 = nll.getVal();
 
+    cacheutils::CachingSimNLL *sim = dynamic_cast<cacheutils::CachingSimNLL *>(&nll);
+    std::vector<double> channelNll0;
+    if (sim && savedChannelNLLs_.size()) {
+        channelNll0 = sim->getChannelNLLs();
+    }
+
     if (setPhysicsModelParameterExpression_ != "") {
        RooArgSet allParams(w->allVars());
        allParams.add(w->allCats());
@@ -573,6 +593,11 @@ void MultiDimFit::doGrid(RooWorkspace *w, RooAbsReal &nll)
             // now we minimize
             nll.clearEvalErrorLog();
             deltaNLL_ = nll.getVal() - nll0;
+            if (sim && savedChannelNLLs_.size()) {
+                for (unsigned ic = 0; ic < savedChannelNLLs_.size(); ++ic) {
+                    savedChannelNLLs_[ic] = sim->getChannelNLLs()[ic] - channelNll0[ic];
+                }
+            }
             if (nll.numEvalErrors() > 0) {
                 deltaNLL_ = 9990;
 		for(unsigned int j=0; j<specifiedNuis_.size(); j++){
@@ -589,6 +614,11 @@ void MultiDimFit::doGrid(RooWorkspace *w, RooAbsReal &nll)
                         minim.minimize(verbose-1);
             if (ok) {
                 deltaNLL_ = nll.getVal() - nll0;
+                if (sim && savedChannelNLLs_.size()) {
+                    for (unsigned ic = 0; ic < savedChannelNLLs_.size(); ++ic) {
+                        savedChannelNLLs_[ic] = sim->getChannelNLLs()[ic] - channelNll0[ic];
+                    }
+                }
                 double qN = 2*(deltaNLL_);
                 double prob = ROOT::Math::chisquared_cdf_c(qN, n+nOtherFloatingPoi_);
 		for(unsigned int j=0; j<specifiedNuis_.size(); j++){
