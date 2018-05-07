@@ -21,6 +21,7 @@ bool CascadeMinimizer::preScan_;
 double CascadeMinimizer::approxPreFitTolerance_ = 0;
 int CascadeMinimizer::approxPreFitStrategy_ = 0;
 int  CascadeMinimizer::preFit_ = 0;
+double CascadeMinimizer::poiPreFit_ = 0.0;
 bool CascadeMinimizer::poiOnlyFit_;
 bool CascadeMinimizer::singleNuisFit_;
 bool CascadeMinimizer::setZeroPoint_ = true;
@@ -79,6 +80,28 @@ bool CascadeMinimizer::improve(int verbose, bool cascade)
     std::string nominalAlgo(ROOT::Math::MinimizerOptions::DefaultMinimizerAlgo());
     float       nominalTol(ROOT::Math::MinimizerOptions::DefaultTolerance());
     minimizer_->setEps(nominalTol);
+    if (poiPreFit_ > 0) {
+      double tol = poiPreFit_;
+      {
+        RooArgSet *nllParams=nll_.getParameters((const RooArgSet*)0);
+        nllParams->remove(CascadeMinimizerGlobalConfigs::O().parametersOfInterest);
+        RooStats::RemoveConstantParameters(nllParams);
+        utils::setAllConstant(*nllParams, true);
+        minimizer_.reset(new RooMinimizer(nll_));
+
+        if (verbose > 1) std::cout << "Running POI pre-fit with " << nominalType << "," << nominalAlgo << " and tolerance " << tol << std::endl;
+        Significance::MinimizerSentry minimizerConfig(nominalType+","+nominalAlgo, tol);
+        minimizer_->setEps(tol);
+        minimizer_->setStrategy(1);
+        improveOnce(verbose-1, true);
+
+        utils::setAllConstant(*nllParams, false);
+        minimizer_.reset(new RooMinimizer(nll_));
+        minimizer_->setEps(nominalTol);
+        minimizer_->setStrategy(strategy_);
+        minimizer_->setPrintLevel(verbose-1);
+      }
+    }
     if (approxPreFitTolerance_ > 0) {
       double tol = std::max(approxPreFitTolerance_, 10. * nominalTol);
       do {
@@ -632,6 +655,7 @@ void CascadeMinimizer::initOptions()
         ("cminPreScan",  "Do a scan before first minimization")
         ("cminPreFit", boost::program_options::value<int>(&preFit_)->default_value(preFit_), "if set to a value N > 0, it will perform a pre-fit with strategy (N-1) with frozen nuisance parameters.")
         ("cminApproxPreFitTolerance", boost::program_options::value<double>(&approxPreFitTolerance_)->default_value(approxPreFitTolerance_), "If non-zero, do first a pre-fit with this tolerance (or 10 times the final tolerance, whichever is largest)")
+        ("cminPoiPreFit", boost::program_options::value<double>(&poiPreFit_)->default_value(poiPreFit_), "If non-zero, do first a pre-fit with this tolerance (or 10 times the final tolerance, whichever is largest)")
         ("cminApproxPreFitStrategy", boost::program_options::value<int>(&approxPreFitStrategy_)->default_value(approxPreFitStrategy_), "Strategy to use in the pre-fit")
         ("cminSingleNuisFit", "Do first a minimization of each nuisance parameter individually")
         ("cminFallbackAlgo", boost::program_options::value<std::vector<std::string> >(), "Fallback algorithms if the default minimizer fails (can use multiple ones). Syntax is algo[,subalgo][,strategy][:tolerance]")
