@@ -72,6 +72,7 @@ class CascadeMinimizer {
         static bool preScan_;
         /// do a pre-fit (with larger tolerance)
         static double approxPreFitTolerance_;
+        static double poiPreFit_;
         /// do a pre-fit (with larger tolerance)
         static int approxPreFitStrategy_;
         /// do a pre-fit (w/o nuisances)
