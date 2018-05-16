@@ -93,7 +93,12 @@ bool CascadeMinimizer::improve(int verbose, bool cascade)
         Significance::MinimizerSentry minimizerConfig(nominalType+","+nominalAlgo, tol);
         minimizer_->setEps(tol);
         minimizer_->setStrategy(1);
-        improveOnce(verbose-1, true);
+        for (unsigned iP = 0; iP < 6; ++iP) {
+          if (iP % 2 == 0) minimizer_->setStrategy(1);
+          if (iP % 2 == 1) minimizer_->setStrategy(0);
+          bool result = improveOnce(verbose-1, true);
+          if (result) break;
+        }
 
         utils::setAllConstant(*nllParams, false);
         minimizer_.reset(new RooMinimizer(nll_));
@@ -143,6 +148,34 @@ bool CascadeMinimizer::improve(int verbose, bool cascade)
 	
       }
     } while (autoBounds_ && !autoBoundsOk(verbose-1));
+    
+    if (poiPreFit_ > 0) {
+      double tol = poiPreFit_;
+      {
+        RooArgSet *nllParams=nll_.getParameters((const RooArgSet*)0);
+        nllParams->remove(CascadeMinimizerGlobalConfigs::O().parametersOfInterest);
+        RooStats::RemoveConstantParameters(nllParams);
+        utils::setAllConstant(*nllParams, true);
+        minimizer_.reset(new RooMinimizer(nll_));
+
+        if (verbose > 1) std::cout << "Running POI post-fit with " << nominalType << "," << nominalAlgo << " and tolerance " << tol << std::endl;
+        Significance::MinimizerSentry minimizerConfig(nominalType+","+nominalAlgo, tol);
+        minimizer_->setEps(tol);
+        minimizer_->setStrategy(1);
+        for (unsigned iP = 0; iP < 6; ++iP) {
+          if (iP % 2 == 0) minimizer_->setStrategy(1);
+          if (iP % 2 == 1) minimizer_->setStrategy(0);
+          bool result = improveOnce(verbose-1, true);
+          if (result) break;
+        }
+
+        utils::setAllConstant(*nllParams, false);
+        minimizer_.reset(new RooMinimizer(nll_));
+        minimizer_->setEps(nominalTol);
+        minimizer_->setStrategy(strategy_);
+        minimizer_->setPrintLevel(verbose-1);
+      }
+    }
 
     if (simnllbb && runtimedef::get(std::string("MINIMIZER_analytic"))) {
       simnllbb->setAnalyticBarlowBeeston(false);
