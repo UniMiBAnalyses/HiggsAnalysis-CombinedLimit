@@ -39,6 +39,7 @@ unsigned int MultiDimFit::lastPoint_  = std::numeric_limits<unsigned int>::max()
 bool MultiDimFit::floatOtherPOIs_ = false;
 unsigned int MultiDimFit::nOtherFloatingPoi_ = 0;
 bool MultiDimFit::fastScan_ = false;
+bool MultiDimFit::POIOnlyScan_ = false;
 bool MultiDimFit::loadedSnapshot_ = false;
 bool MultiDimFit::savingSnapshot_ = false;
 bool MultiDimFit::startFromPreFit_ = false;
@@ -85,6 +86,7 @@ MultiDimFit::MultiDimFit() :
 	("fixedPointPOIs",   boost::program_options::value<std::string>(&fixedPointPOIs_)->default_value(""), "Parameter space point for --algo=fixed")
         ("centeredRange", boost::program_options::value<float>(&centeredRange_)->default_value(centeredRange_), "Set to any X >= 0 to do the scan in the +/- X range centered on the nominal value")
         ("fastScan", "Do a fast scan, evaluating the likelihood without profiling it.")
+        ("poiOnlyScan", "Do a fast scan, evaluating the likelihood without profiling it.")
         ("maxDeltaNLLForProf",  boost::program_options::value<float>(&maxDeltaNLLForProf_)->default_value(maxDeltaNLLForProf_), "Last point to use")
 	("saveSpecifiedNuis",   boost::program_options::value<std::string>(&saveSpecifiedNuis_)->default_value(""), "Save specified parameters (default = none)")
 	("saveSpecifiedFunc",   boost::program_options::value<std::string>(&saveSpecifiedFuncs_)->default_value(""), "Save specified function values (default = none)")
@@ -123,6 +125,7 @@ void MultiDimFit::applyOptions(const boost::program_options::variables_map &vm)
         if (vm["saveInactivePOI"].defaulted()) saveInactivePOI_ = true;
     } else throw std::invalid_argument(std::string("Unknown algorithm: "+algo));
     fastScan_ = (vm.count("fastScan") > 0);
+    POIOnlyScan_ = (vm.count("poiOnlyScan") > 0);
     squareDistPoiStep_ = (vm.count("squareDistPoiStep") > 0);
     skipInitialFit_ = (vm.count("skipInitialFit") > 0);
     hasMaxDeltaNLLForProf_ = !vm["maxDeltaNLLForProf"].defaulted();
@@ -183,6 +186,12 @@ bool MultiDimFit::runSpecific(RooWorkspace *w, RooStats::ModelConfig *mc_s, RooS
         std::cout << "MultiDimFit -- Skipping initial global fit" << std::endl;
         // must still create the NLL
         nll.reset(pdf.createNLL(data, constrainCmdArg, RooFit::Extended(pdf.canBeExtended()), RooFit::Offset(true)));
+    }
+
+    if (POIOnlyScan_) {
+        std::unique_ptr<RooArgSet> allpars(nll->getParameters(RooArgSet()));
+        allpars->remove(*mc_s->GetParametersOfInterest());
+        utils::setAllConstant(*allpars);
     }
 
     //if(w->var("r")) {w->var("r")->Print();}

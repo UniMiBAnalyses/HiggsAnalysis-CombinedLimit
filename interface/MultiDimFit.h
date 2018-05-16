@@ -46,6 +46,7 @@ protected:
   static bool squareDistPoiStep_;
   static bool skipInitialFit_;
   static bool fastScan_;
+  static bool POIOnlyScan_;
   static bool hasMaxDeltaNLLForProf_;
   static bool loadedSnapshot_,  savingSnapshot_;
   static float maxDeltaNLLForProf_;
