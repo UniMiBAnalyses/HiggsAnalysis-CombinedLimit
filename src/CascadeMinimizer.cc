@@ -150,7 +150,11 @@ bool CascadeMinimizer::improveOnce(int verbose, bool noHesse)
     } else {
         if (verbose+2>0) Logger::instance().log(std::string(Form("CascadeMinimizer.cc: %d -- Minimisation configured with Type=%s, Algo=%s, strategy=%d, tolerance=%g",__LINE__,myType.c_str(),myAlgo.c_str(),myStrategy,tol)),Logger::kLogLevelInfo,__func__);
         cacheutils::CachingSimNLL *simnll = setZeroPoint_ ? dynamic_cast<cacheutils::CachingSimNLL *>(&nll_) : 0;
-        if (simnll) simnll->setZeroPoint();
+        if (simnll) {
+          std::cout << "Setting the zero point, current NLL = " << simnll->getVal() << std::endl;
+          simnll->setZeroPoint();
+          std::cout << "New NLL = " << simnll->getVal() << std::endl;
+        }
         if ((!simnll) && optConst) minimizer_->optimizeConst(std::max(0,optConst));
         if ((!simnll) && rooFitOffset) minimizer_->setOffsetting(std::max(0,rooFitOffset));
         if (firstHesse_ && !noHesse) {

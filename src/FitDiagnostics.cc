@@ -175,8 +175,8 @@ bool FitDiagnostics::runSpecific(RooWorkspace *w, RooStats::ModelConfig *mc_s, R
             if (minos_ == "all") minim.minos(*nuis);
             res_prefit = minim.save();
       }
-      if (fitOut.get() ) fitOut->WriteTObject(res_prefit, "nuisances_prefit_res");
-      if (fitOut.get() ) fitOut->WriteTObject(nuis->snapshot(), "nuisances_prefit");
+      //if (fitOut.get() ) fitOut->WriteTObject(res_prefit, "nuisances_prefit_res");
+      //if (fitOut.get() ) fitOut->WriteTObject(nuis->snapshot(), "nuisances_prefit");
 
       if (saveNormalizations_) {
           RooArgSet *norms = new RooArgSet();
@@ -223,12 +223,12 @@ bool FitDiagnostics::runSpecific(RooWorkspace *w, RooStats::ModelConfig *mc_s, R
     // skip b-only fit
   } else if (minos_ != "all") {
     RooArgList minos; 
-    res_b = doFit(*mc_s->GetPdf(), data, minos, constCmdArg_s, /*hesse=*/true,/*ndim*/1,/*reuseNLL*/ true); 
+    res_b = doFit(*mc_s->GetPdf(), data, minos, constCmdArg_s, /*hesse=*/false,/*ndim*/1,/*reuseNLL*/ true); 
     nll_bonly_=nll->getVal()-nll0;   
   } else {
     CloseCoutSentry sentry(verbose < 2);
     RooArgList minos = (*mc_s->GetNuisanceParameters()); 
-    res_b = doFit(*mc_s->GetPdf(), data, minos, constCmdArg_s, /*hesse=*/true,/*ndim*/1,/*reuseNLL*/ true); 
+    res_b = doFit(*mc_s->GetPdf(), data, minos, constCmdArg_s, /*hesse=*/false,/*ndim*/1,/*reuseNLL*/ true); 
 
     if (res_b) nll_bonly_ = nll->getVal() - nll0;
 
@@ -245,8 +245,8 @@ bool FitDiagnostics::runSpecific(RooWorkspace *w, RooStats::ModelConfig *mc_s, R
   if (res_b) { 
       if (verbose > 1) res_b->Print("V");
       if (fitOut.get()) {
-	 if (currentToy_< 1)	fitOut->WriteTObject(res_b,"fit_b");
-	 if (withSystematics)	{
+	 //if (currentToy_< 1)	fitOut->WriteTObject(res_b,"fit_b");
+	 if (false)	{
 		setFitResultTrees(mc_s->GetNuisanceParameters(),nuisanceParameters_);
 		setFitResultTrees(mc_s->GetGlobalObservables(),globalObservables_);
 	 }
@@ -303,13 +303,13 @@ bool FitDiagnostics::runSpecific(RooWorkspace *w, RooStats::ModelConfig *mc_s, R
   r->setVal(preFitValue_); r->setConstant(false); 
   if (minos_ != "all") {
     RooArgList minos; if (minos_ == "poi") minos.add(*r);
-    res_s = doFit(*mc_s->GetPdf(), data, minos, constCmdArg_s, /*hesse=*/!noErrors_,/*ndim*/1,/*reuseNLL*/ true); 
+    res_s = doFit(*mc_s->GetPdf(), data, minos, constCmdArg_s, /*hesse=*/false,/*ndim*/1,/*reuseNLL*/ true); 
     nll_sb_ = nll->getVal()-nll0;
   } else {
     CloseCoutSentry sentry(verbose < 2);
     RooArgList minos = (*mc_s->GetNuisanceParameters()); 
     minos.add((*mc_s->GetParametersOfInterest()));  // Add POI this time 
-    res_s = doFit(*mc_s->GetPdf(), data, minos, constCmdArg_s, /*hesse=*/true,/*ndim*/1,/*reuseNLL*/ true); 
+    res_s = doFit(*mc_s->GetPdf(), data, minos, constCmdArg_s, /*hesse=*/false,/*ndim*/1,/*reuseNLL*/ true); 
     if (res_s) nll_sb_= nll->getVal()-nll0;
 
   }
@@ -327,9 +327,9 @@ bool FitDiagnostics::runSpecific(RooWorkspace *w, RooStats::ModelConfig *mc_s, R
       limitErr = r->getError();
       if (verbose > 1) res_s->Print("V");
       if (fitOut.get()){
-	 if (currentToy_<1) fitOut->WriteTObject(res_s, "fit_s");
+	 //if (currentToy_<1) fitOut->WriteTObject(res_s, "fit_s");
 
-	 if (withSystematics)	{
+	 if (false)	{
 	   setFitResultTrees(mc_s->GetNuisanceParameters(),nuisanceParameters_);
 	   setFitResultTrees(mc_s->GetGlobalObservables(),globalObservables_);
 	 }
@@ -533,6 +533,9 @@ void FitDiagnostics::getShapesAndNorms(RooAbsPdf *pdf, const RooArgSet &obs, std
            plist.removeAll();
            clist.add(err->coefList());
            plist.add(err->wrapperList());
+           if (plist.getSize() == 0) {
+             plist.add(err->funcList());
+           }
          }
       }
       for (int i = 0, n = clist.getSize(); i < n; ++i) {
@@ -979,7 +982,7 @@ void FitDiagnostics::createFitResultTrees(const RooStats::ModelConfig &mc, bool 
          processNormalizations_ = new double[norms->getSize()];
 
 	 // If no systematic (-S 0), then don't make nuisance trees
-	 if (withSys){
+	 if (false){
           const RooArgSet *cons = mc.GetGlobalObservables();
           const RooArgSet *nuis = mc.GetNuisanceParameters();
  	  globalObservables_ = new double[cons->getSize()];
