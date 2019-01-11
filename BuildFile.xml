@@ -8,6 +8,10 @@
 <lib name="Smatrix"/>
 <use   name="boost_program_options"/>
 <use   name="boost_filesystem"/>
+<Flags CXXFLAGS="-I$(CMSSW_BASE)/src/HiggsAnalysis/CombinedLimit/HEPfit-1.0-RC1/HEPfit/include/HEPfit"/>
+<Flags CXXFLAGS="-I$(CMSSW_BASE)/src/HiggsAnalysis/CombinedLimit/HEPfit-1.0-RC1/BAT/include"/>
+<Flags LDFLAGS="-L$(CMSSW_BASE)/src/HiggsAnalysis/CombinedLimit/HEPfit-1.0-RC1/BAT/lib -lBATmodels -lBAT"/>
+<Flags LDFLAGS="-L$(CMSSW_BASE)/src/HiggsAnalysis/CombinedLimit/HEPfit-1.0-RC1/HEPfit/lib -lHEPfit"/>
 <export>
    <lib name="1"/>
 </export>

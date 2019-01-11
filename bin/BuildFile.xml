@@ -2,3 +2,11 @@
   <use name="HiggsAnalysis/CombinedLimit"/>
   <use   name="boost_program_options"/>
 </bin>
+<bin file="MCMC.cpp" name="MCMC">
+  <use name="HiggsAnalysis/CombinedLimit"/>
+  <use   name="boost_program_options"/>
+  <Flags CXXFLAGS="-I$(CMSSW_BASE)/src/HiggsAnalysis/CombinedLimit/HEPfit-1.0-RC1/HEPfit/include/HEPfit"/>
+  <Flags CXXFLAGS="-I$(CMSSW_BASE)/src/HiggsAnalysis/CombinedLimit/HEPfit-1.0-RC1/BAT/include"/>
+  <Flags LDFLAGS="-L$(CMSSW_BASE)/src/HiggsAnalysis/CombinedLimit/HEPfit-1.0-RC1/BAT/lib -lBATmodels -lBAT"/>
+  <Flags LDFLAGS="-L$(CMSSW_BASE)/src/HiggsAnalysis/CombinedLimit/HEPfit-1.0-RC1/HEPfit/lib -lHEPfit"/>
+</bin>
