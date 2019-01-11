@@ -23,13 +23,9 @@ RooHEPFitWrapper::RooHEPFitWrapper(
     const char* name, const char* title, std::string const& conf)
     : RooAbsReal(name, title),
       _init(false),
-      // _x0("x0", "initial point", this, kTRUE, kFALSE),
       _conf(conf),
       _x("x", "Observables", this, kTRUE, kFALSE),
       _MC(nullptr) {
-  // _x.add(x);
-  // _x0.add(x0);
-  // assert((_trackers.size()) == (_terms.size()));
 }
 
 //_____________________________________________________________________________
@@ -37,7 +33,6 @@ RooHEPFitWrapper::RooHEPFitWrapper(const RooHEPFitWrapper& other,
                                        const char* name)
     : RooAbsReal(other, name),
       _init(false),
-      // _x0("x0", this, other._x0),
       _conf(other._conf),
       _x("x", this, other._x),
       _MC(nullptr) {}
@@ -51,44 +46,12 @@ Double_t RooHEPFitWrapper::evaluate() const {
   }
   double nll = -1 * _MC->getMCEngine()->Function_h(point);
   return nll;
-  // double fullsum = 0.;
-
-  // unsigned nx = _x.getSize();
-  // std::vector<double> dx(nx);
-
-  // for (unsigned i = 0; i < nx; ++i) {
-  //   dx[i] = ((RooAbsReal*)(_x.at(i)))->getVal() -
-  //           ((RooAbsReal*)(_x0.at(i)))->getVal();
-  // }
-
-  // for (unsigned i = 0; i < _trackers.size(); ++i) {
-  //   unsigned n = _trackers[i].size();
-  //   double term = _terms[i];
-  //   for (unsigned t = 0; t < n; ++t) {
-  //     term *= dx[_trackers[i][t]];
-  //   }
-  //   fullsum += term;
-  // }
-  // return fullsum;
-  // return 0.;
 }
 
 
 void RooHEPFitWrapper::printMultiline(std::ostream& os, Int_t contents,
                                  Bool_t verbose, TString indent) const {
   RooAbsReal::printMultiline(os, contents, verbose, indent);
-  // for (unsigned i = 0; i < _trackers.size(); ++i) {
-  //   std::cout << " - [";
-  //   for (unsigned j = 0; j < _trackers[i].size(); ++j) {
-  //     std::cout << _trackers[i][j];
-  //     if (j != (_trackers[i].size() - 1)) {
-  //       std::cout << ", ";
-  //     } else {
-  //       std::cout << "] = ";
-  //     }
-  //   }
-  //   std::cout << _terms[i] << "\n";
-  // }
 }
 
 void RooHEPFitWrapper::InitModel() {
@@ -123,7 +86,6 @@ RooArgList * RooHEPFitWrapper::InitVars() {
           res->addOwned(*var);
           _x.add(*var);
           var->Print();
-          // newpars.push_back(param.getave());
       }
   }
   return res;

@@ -14,6 +14,8 @@
 #include <iostream>
 #include <RooRealVar.h>
 #include <RooMinimizer.h>
+#include "TFile.h"
+#include "TTree.h"
 // #include <HEPfit.h>
 // #include <BAT/BCParameter.h>
 /* Necessary if MPI support is enabled during compilation. */
@@ -27,15 +29,46 @@ int main(int argc, char** argv)
     vars->Print("v");
 
     auto mHl = (RooRealVar*)vars->find("mHl");
-    wrapper.Print("tree");
-    mHl->setVal(40);
-    wrapper.Print("tree");
 
 
     RooMinimizer minim(wrapper);
     minim.setVerbose(false);
-    minim.setEps(0.01);
+    minim.setEps(0.1);
     minim.minimize("Minuit2", "migrad");
+
+    TFile fout("hepfit_test.root", "RECREATE");
+    TTree tout("limit", "limit");
+    float POI = mHl->getVal();
+    float deltaNLL = 0;
+    float quantileExpected = 1;
+    double nll0 = wrapper.getVal();
+
+    tout.Branch("mHl", &POI, "mHl/f");
+    tout.Branch("deltaNLL", &deltaNLL, "deltaNLL/f");
+    tout.Branch("quantileExpected", &quantileExpected, "quantileExpected/f");
+
+    tout.Fill();
+
+    unsigned points = 80;
+    double width = (mHl->getMax() - mHl->getMin()) / double(points);
+    double r = mHl->getMin() + 0.5 * width;
+
+    auto snap = vars->snapshot();
+
+    for (unsigned ip = 0; ip < points; ++ip) {
+        vars->assignValueOnly(*snap);
+        mHl->setVal(r);
+        mHl->setConstant(true);
+        // minim.minimize("Minuit2", "migrad");
+        POI = r;
+        deltaNLL = wrapper.getVal() - nll0;
+        std::cout << "var = " << r << "; nll0 = " << nll0 << ", deltaNLL = " << deltaNLL << "\n";
+        tout.Fill();
+        r += width;
+    }
+
+    tout.Write();
+    fout.Close();
     // minim.save()->Print();
 //     /* Necessary if MPI support is enabled during compilation. */
 // #ifdef _MPI
