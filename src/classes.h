@@ -52,6 +52,7 @@
 #include "HiggsAnalysis/CombinedLimit/interface/CMSHistFunc.h"
 #include "HiggsAnalysis/CombinedLimit/interface/CMSHistErrorPropagator.h"
 #include "HiggsAnalysis/CombinedLimit/interface/CMSHistFuncWrapper.h"
+#include "HiggsAnalysis/CombinedLimit/interface/RooCMSInterpVar.h"
 
 #include "HiggsAnalysis/CombinedLimit/interface/RooPiecewisePolynomial.h"
 
