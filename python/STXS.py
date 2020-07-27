@@ -76,8 +76,14 @@ stage1_1_procs = {
             'ZH_had_GE2J_MJJ_350_700_PTH_0_200_PTHJJ_0_25','ZH_had_GE2J_MJJ_350_700_PTH_0_200_PTHJJ_GT25',
             'ZH_had_GE2J_MJJ_GT700_PTH_0_200_PTHJJ_0_25','ZH_had_GE2J_MJJ_GT700_PTH_0_200_PTHJJ_GT25'],
 
-  'ttH':['ttH']#,
+  'ttH':['ttH'],
+  'WG': []
 
   #'other':['tHq','tHW','bbH']
 }
+
+for ipt in xrange(5):
+  for iphi in xrange(3):
+    stage1_1_procs['WG'].append('WG_main_p_%i_%i' % (ipt, iphi))
+    stage1_1_procs['WG'].append('WG_main_n_%i_%i' % (ipt, iphi))
 

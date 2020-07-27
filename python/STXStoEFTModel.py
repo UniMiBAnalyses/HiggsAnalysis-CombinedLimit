@@ -26,6 +26,9 @@ def getSTXSProdDecMode(bin,process,options):
       processSource = re.sub('_%s'%D,'',process)
       foundDecay = D
       matchedDecayString = True
+  if process.startswith('WG_'):
+      matchedDecayString = True
+      foundDecay = 'WG'
   if not matchedDecayString: raise RuntimeError, "Validation Error: no supported decay found in process"
   return (processSource, foundDecay, foundEnergy)
 
@@ -55,7 +58,7 @@ class STXStoEFTBaseModel(SMLikeHiggsModel):
     self.useExtendedVBFScheme=False
     self.linearOnly=False
     if self.freezeOtherParameters: 
-      self.parametersOfInterest = ['cG','cA','cWWMinuscB','cWWPluscB','cHW','cHB','cu','cd','cl'] # note cWW+cB is frozen, but required to define cWW and cB
+      self.parametersOfInterest = ['cG','cA','cWWMinuscB','cWWPluscB','cHW','cHB','cu','cd','cl','c3W'] # note cWW+cB is frozen, but required to define cWW and cB
       self.distinctParametersOfInterest = set([])
       for p in self.parametersOfInterest:
         if "Plus" in p: self.distinctParametersOfInterest = self.distinctParametersOfInterest | set(p.split("Plus"))
@@ -316,6 +319,8 @@ class AllStagesToEFTModel(STXStoEFTBaseModel):
     #Read in parameter list from file using textToPOIList function
     self.textToPOIList( os.path.join(self.SMH.datadir,'eft/HEL/pois.txt') )
     POIs = ','.join(self.pois.keys())
+
+    print POIs
     for poi, poi_range in self.pois.iteritems(): self.modelBuilder.doVar("%s%s"%(poi,poi_range))
     # Remove cWW+cB from POI list if freezing other parameters
     if self.freezeOtherParameters: POIs = re.sub("cWWPluscB_x02,","",POIs)
@@ -398,7 +403,8 @@ class AllStagesToEFTModel(STXStoEFTBaseModel):
       if decay in self.DECAYS: BRscal = "scaling_BR_%s"%decay
       else:
         print "[WARNING] Decay %s is not supported in STXStoEFT Model, setting to 1"%decay
-        return 1
+        BRscal = '1'
+        # return 1
         #raise ValueError("[ERROR] Decay %s is not supported in STXStoEFT Model"%decay)
 
       # Uncertainty scaling: BR and STXS bin uncertainties
