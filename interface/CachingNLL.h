@@ -164,6 +164,7 @@ class CachingSimNLL  : public RooAbsReal {
         ~CachingSimNLL() ;
         virtual CachingSimNLL *clone(const char *name = 0) const ;
         virtual Double_t evaluate() const ;
+        std::vector<double> const& getValSplit() const { return nllSplit_; }
         virtual Bool_t isDerived() const { return kTRUE; }
         virtual Double_t defaultErrorLevel() const { return 0.5; }
         void setData(const RooAbsData &data) ;
@@ -215,6 +216,7 @@ class CachingSimNLL  : public RooAbsReal {
         RooArgSet                activeParameters_, activeCatParameters_;
         double                   maskingOffset_;     // offset to ensure that interal or constraint masking doesn't change NLL value
         double                   maskingOffsetZero_; // and associated zero point
+        mutable std::vector<double> nllSplit_;
 };
 
 }

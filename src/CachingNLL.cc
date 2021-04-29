@@ -1036,6 +1036,9 @@ cacheutils::CachingSimNLL::evaluate() const
     static bool gentleNegativePenalty_ = runtimedef::get("GENTLE_LEE");
     DefaultAccumulator<double> ret = 0;
     unsigned idx = 0;
+    if (nllSplit_.size() == 0) {
+        nllSplit_.resize(pdfs_.size() + 1);
+    }
     for (std::vector<CachingAddNLL*>::const_iterator it = pdfs_.begin(), ed = pdfs_.end(); it != ed; ++it, ++idx) {
         if (*it != 0) {
             if (!channelMasks_.empty() && channelMasks_[idx]->getVal() != 0.) {
@@ -1048,6 +1051,7 @@ cacheutils::CachingSimNLL::evaluate() const
                 continue;
             }
             double nllval = (*it)->getVal();
+            nllSplit_[int(it - pdfs_.begin())] = nllval;
             // what sanity check could I put here?
             ret += nllval;
         }
@@ -1087,6 +1091,7 @@ cacheutils::CachingSimNLL::evaluate() const
                 ret2 += (logpdfval + *itz);
             }
         }
+        nllSplit_[pdfs_.size()] = -1. * ret2.sum();
         ret -= ret2.sum();
     }
     ret += (maskingOffset_ - maskingOffsetZero_);

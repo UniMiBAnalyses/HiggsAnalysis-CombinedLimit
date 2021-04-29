@@ -83,7 +83,10 @@ bool GoodnessOfFit::run(RooWorkspace *w, RooStats::ModelConfig *mc_s, RooStats::
 
   RooRealVar *r = dynamic_cast<RooRealVar *>(mc_s->GetParametersOfInterest()->first());
   if (fixedMu_) { r->setVal(mu_); r->setConstant(true); }
-  if (algo_ == "saturated") return runSaturatedModel(w, mc_s, mc_b, data, limit, limitErr, hint);
+  if (algo_ == "saturated") {
+    initSaturated(mc_s);
+    return runSaturatedModel(w, mc_s, mc_b, data, limit, limitErr, hint);
+  }
   static bool is_init = false;
   if (algo_ == "AD" || algo_ == "KS") {
     if (!is_init) {
@@ -97,7 +100,25 @@ bool GoodnessOfFit::run(RooWorkspace *w, RooStats::ModelConfig *mc_s, RooStats::
     if (algo_ == "KS") return runKSandAD(w, mc_s, mc_b, data, limit, limitErr, hint, 1);
   }
 
-  return false;  
+  return false;
+}
+
+void GoodnessOfFit::initSaturated(RooStats::ModelConfig *mc_s) {
+  RooSimultaneous *sim = dynamic_cast<RooSimultaneous *>(mc_s->GetPdf());
+  if (sim) {
+    std::auto_ptr<RooAbsCategoryLValue> cat(
+        static_cast<RooAbsCategoryLValue *>(sim->indexCat().Clone()));
+    int nbins = cat->numBins((const char *)0);
+    binNames_.resize(nbins + 1);
+    qVals_.resize(nbins + 1);
+    for (int i = 0; i < nbins; ++i) {
+      cat->setBin(i);
+      binNames_[i] = cat->getLabel();
+      qVals_[i] = 0.;
+      Combine::addBranch(binNames_[i].c_str(), &qVals_[i], (binNames_[i]+"/F").c_str());
+    }
+    Combine::addBranch("constraints", &qVals_[nbins], "constraints/F");
+  }
 }
 
 void GoodnessOfFit::initKSandAD(RooStats::ModelConfig *mc_s) {
@@ -193,6 +214,14 @@ bool GoodnessOfFit::runSaturatedModel(RooWorkspace *w, RooStats::ModelConfig *mc
     utils::setModelParameters(setParametersForEval_, w->allVars());
   }
   double nll_nominal = nominal_nll->getVal();
+  std::vector<double> nll_nominal_split;
+  if (dynamic_cast<cacheutils::CachingSimNLL*>(nominal_nll.get())) {
+    nll_nominal_split = static_cast<cacheutils::CachingSimNLL*>(nominal_nll.get())->getValSplit();
+    std::cout << "nll_nominal = " << nll_nominal << "\n";
+    for (unsigned i = 0; i < nll_nominal_split.size(); ++i) {
+      std::cout << "nll_nominal[" << i << "] = " << nll_nominal_split[i] << "\n";
+    }
+  }
 
   if (setParametersForFit_ != "") {
     utils::setModelParameters(setParametersForFit_, w->allVars());
@@ -208,6 +237,14 @@ bool GoodnessOfFit::runSaturatedModel(RooWorkspace *w, RooStats::ModelConfig *mc
     utils::setModelParameters(setParametersForEval_, w->allVars());
   }
   double nll_saturated = saturated_nll->getVal();
+  if (dynamic_cast<cacheutils::CachingSimNLL*>(saturated_nll.get())) {
+    std::vector<double> const& nll_saturated_split = static_cast<cacheutils::CachingSimNLL*>(saturated_nll.get())->getValSplit();
+    std::cout << "nll_saturated = " << nll_saturated << "\n";
+    for (unsigned i = 0; i < nll_saturated_split.size(); ++i) {
+      std::cout << "nll_saturated[" << i << "] = " << nll_saturated_split[i] << "\n";
+      qVals_[i] = 2.*(nll_nominal_split[i] - nll_saturated_split[i]);
+    }
+  }
 
   sentry.clear();
 
